@@ -64,20 +64,31 @@
 
   <!-- HOME TAB -->
   <div class="tab-content active" id="tab-home">
-    <div class="hero">
+
+    <!-- HERO (shown when no chat) -->
+    <div class="hero" id="heroSection">
       <button class="model-selector" id="modelSelectorBtn">
-        <span id="selectedModel">Gemini 3</span>
-        <span class="model-sub">via Puter</span>
+        <span id="selectedModel">Qwen 3.5 397B</span>
+        <span class="model-sub">via NVIDIA</span>
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <h1 class="hero-title">Hello there!<br/>How can I help you today?</h1>
       <div class="prompt-tags">
-        <span class="prompt-tag">&#128269; Deep Research</span>
-        <span class="prompt-tag">&#9889; Quick Answer</span>
-        <span class="prompt-tag">&#128196; Summarize</span>
-        <span class="prompt-tag">&#128187; Write Code</span>
-        <span class="prompt-tag">&#127775; Creative</span>
+        <span class="prompt-tag" onclick="fillPrompt('Do a deep research on artificial intelligence trends 2025')">&#128269; Deep Research</span>
+        <span class="prompt-tag" onclick="fillPrompt('Give me a quick answer: what is a neural network?')">&#9889; Quick Answer</span>
+        <span class="prompt-tag" onclick="fillPrompt('Summarize the key points of quantum computing for me')">&#128196; Summarize</span>
+        <span class="prompt-tag" onclick="fillPrompt('Write a Python function to reverse a linked list')">&#128187; Write Code</span>
+        <span class="prompt-tag" onclick="fillPrompt('Write a short creative story about a robot exploring the ocean')">&#127775; Creative</span>
       </div>
+    </div>
+
+    <!-- CHAT AREA (shown during conversation) -->
+    <div class="chat-area-wrap" id="chatAreaWrap" style="display:none">
+      <div class="chat-area" id="chatArea"></div>
+    </div>
+
+    <!-- INPUT (always visible at bottom of home tab) -->
+    <div class="input-row">
       <div class="input-box">
         <textarea class="chat-input" id="chatInput" placeholder="Ask Arcus" rows="1"></textarea>
         <div class="input-actions">
@@ -99,6 +110,7 @@
       </div>
       <p class="disclaimer">Arcus can make mistakes</p>
     </div>
+
   </div>
 
   <!-- STUDIO TAB -->
@@ -107,42 +119,12 @@
       <h2 class="tab-page-title">Studio</h2>
       <p class="tab-page-sub">Create and fine-tune AI-generated content</p>
       <div class="studio-grid">
-        <div class="studio-card">
-          <div class="studio-card-icon">&#127912;</div>
-          <h3>Image Generation</h3>
-          <p>Generate stunning images with AI. Describe what you want and let Arcus create it.</p>
-          <button class="card-btn">Open</button>
-        </div>
-        <div class="studio-card">
-          <div class="studio-card-icon">&#9997;&#65039;</div>
-          <h3>Content Writer</h3>
-          <p>Generate blog posts, social content, and more with AI-powered writing tools.</p>
-          <button class="card-btn">Open</button>
-        </div>
-        <div class="studio-card">
-          <div class="studio-card-icon">&#128266;</div>
-          <h3>Voice Synthesis</h3>
-          <p>Convert text to natural-sounding speech using advanced voice models.</p>
-          <button class="card-btn">Open</button>
-        </div>
-        <div class="studio-card">
-          <div class="studio-card-icon">&#127916;</div>
-          <h3>Video Creator</h3>
-          <p>Transform your ideas into videos with AI scene generation.</p>
-          <button class="card-btn">Open</button>
-        </div>
-        <div class="studio-card">
-          <div class="studio-card-icon">&#128202;</div>
-          <h3>Data Visualizer</h3>
-          <p>Turn raw data into beautiful charts and visual reports instantly.</p>
-          <button class="card-btn">Open</button>
-        </div>
-        <div class="studio-card">
-          <div class="studio-card-icon">&#128187;</div>
-          <h3>Code Studio</h3>
-          <p>Generate, review, and debug code with AI assistance.</p>
-          <button class="card-btn">Open</button>
-        </div>
+        <div class="studio-card"><div class="studio-card-icon">&#127912;</div><h3>Image Generation</h3><p>Generate stunning images with AI. Describe what you want and let Arcus create it.</p><button class="card-btn">Open</button></div>
+        <div class="studio-card"><div class="studio-card-icon">&#9997;&#65039;</div><h3>Content Writer</h3><p>Generate blog posts, social content, and more with AI-powered writing tools.</p><button class="card-btn">Open</button></div>
+        <div class="studio-card"><div class="studio-card-icon">&#128266;</div><h3>Voice Synthesis</h3><p>Convert text to natural-sounding speech using advanced voice models.</p><button class="card-btn">Open</button></div>
+        <div class="studio-card"><div class="studio-card-icon">&#127916;</div><h3>Video Creator</h3><p>Transform your ideas into videos with AI scene generation.</p><button class="card-btn">Open</button></div>
+        <div class="studio-card"><div class="studio-card-icon">&#128202;</div><h3>Data Visualizer</h3><p>Turn raw data into beautiful charts and visual reports instantly.</p><button class="card-btn">Open</button></div>
+        <div class="studio-card"><div class="studio-card-icon">&#128187;</div><h3>Code Studio</h3><p>Generate, review, and debug code with AI assistance.</p><button class="card-btn">Open</button></div>
       </div>
     </div>
   </div>
@@ -153,26 +135,10 @@
       <h2 class="tab-page-title">Agent</h2>
       <p class="tab-page-sub">Autonomous AI agents that work for you</p>
       <div class="agent-list">
-        <div class="agent-card">
-          <div class="agent-status online"></div>
-          <div class="agent-info"><h3>Research Agent</h3><p>Browses the web and compiles research reports autonomously.</p></div>
-          <button class="card-btn">Run</button>
-        </div>
-        <div class="agent-card">
-          <div class="agent-status idle"></div>
-          <div class="agent-info"><h3>Code Agent</h3><p>Writes, tests, and deploys code across multiple files.</p></div>
-          <button class="card-btn">Run</button>
-        </div>
-        <div class="agent-card">
-          <div class="agent-status idle"></div>
-          <div class="agent-info"><h3>Automation Agent</h3><p>Handles repetitive tasks and workflow automation.</p></div>
-          <button class="card-btn">Run</button>
-        </div>
-        <div class="agent-card">
-          <div class="agent-status idle"></div>
-          <div class="agent-info"><h3>Data Agent</h3><p>Scrapes, cleans, and analyzes data from multiple sources.</p></div>
-          <button class="card-btn">Run</button>
-        </div>
+        <div class="agent-card"><div class="agent-status online"></div><div class="agent-info"><h3>Research Agent</h3><p>Browses the web and compiles research reports autonomously.</p></div><button class="card-btn">Run</button></div>
+        <div class="agent-card"><div class="agent-status idle"></div><div class="agent-info"><h3>Code Agent</h3><p>Writes, tests, and deploys code across multiple files.</p></div><button class="card-btn">Run</button></div>
+        <div class="agent-card"><div class="agent-status idle"></div><div class="agent-info"><h3>Automation Agent</h3><p>Handles repetitive tasks and workflow automation.</p></div><button class="card-btn">Run</button></div>
+        <div class="agent-card"><div class="agent-status idle"></div><div class="agent-info"><h3>Data Agent</h3><p>Scrapes, cleans, and analyzes data from multiple sources.</p></div><button class="card-btn">Run</button></div>
       </div>
       <div class="agent-builder">
         <h3>Build Custom Agent</h3>
@@ -197,12 +163,12 @@
   <div class="dropdown-panel">
     <input type="text" class="dropdown-search" id="modelSearch" placeholder="Search Models" />
     <div class="model-list" id="modelList">
-      <div class="model-item active" data-model="Gemini 3">Gemini 3 <span class="model-badge">via Puter</span></div>
-      <div class="model-item" data-model="Gemini 3 Pro">Gemini 3 Pro <span class="model-badge pro">Pro</span></div>
-      <div class="model-item" data-model="GPT-4o">GPT-4o <span class="model-badge">via Puter</span></div>
-      <div class="model-item" data-model="Claude 3.5 Sonnet">Claude 3.5 Sonnet <span class="model-badge">via Puter</span></div>
-      <div class="model-item" data-model="Llama 3.3 70B">Llama 3.3 70B <span class="model-badge">via Puter</span></div>
-      <div class="model-item" data-model="Mistral Large">Mistral Large <span class="model-badge">via Puter</span></div>
+      <div class="model-item active" data-model="Qwen 3.5 397B" data-model-id="qwen/qwen3.5-397b-a17b">Qwen 3.5 397B <span class="model-badge">NVIDIA</span></div>
+      <div class="model-item" data-model="Llama 3.3 70B" data-model-id="meta/llama-3.3-70b-instruct">Llama 3.3 70B <span class="model-badge">NVIDIA</span></div>
+      <div class="model-item" data-model="Mistral Large" data-model-id="mistralai/mistral-large-2-instruct">Mistral Large <span class="model-badge">NVIDIA</span></div>
+      <div class="model-item" data-model="Gemma 3 27B" data-model-id="google/gemma-3-27b-it">Gemma 3 27B <span class="model-badge">NVIDIA</span></div>
+      <div class="model-item" data-model="DeepSeek R1" data-model-id="deepseek-ai/deepseek-r1">DeepSeek R1 <span class="model-badge pro">Pro</span></div>
+      <div class="model-item" data-model="Qwen 3 235B" data-model-id="qwen/qwen3-235b-a22b">Qwen 3 235B <span class="model-badge pro">Pro</span></div>
     </div>
   </div>
 </div>
@@ -223,9 +189,9 @@
     </div>
     <div class="settings-grid">
       <div class="settings-card"><h4>Temperature</h4><p>Higher values make output more random, lower values more focused</p><input type="range" class="settings-slider" id="tempSlider" min="0" max="2" step="0.1" value="0.7" /><span class="slider-val" id="tempVal">0.7</span></div>
-      <div class="settings-card"><h4>Max Tokens</h4><p>Maximum length of the generated response</p><input type="range" class="settings-slider" id="maxTokensSlider" min="256" max="8192" step="256" value="2048" /><span class="slider-val" id="maxTokensVal">2048</span></div>
-      <div class="settings-card"><h4>Top P</h4><p>Controls diversity via nucleus sampling</p><input type="range" class="settings-slider" id="topPSlider" min="0" max="1" step="0.05" value="0.9" /><span class="slider-val" id="topPVal">0.9</span></div>
-      <div class="settings-card"><h4>Top K</h4><p>Limits vocabulary to top K tokens (0 = disabled)</p><input type="range" class="settings-slider" id="topKSlider" min="0" max="100" step="1" value="0" /><span class="slider-val" id="topKVal">0</span></div>
+      <div class="settings-card"><h4>Max Tokens</h4><p>Maximum length of the generated response</p><input type="range" class="settings-slider" id="maxTokensSlider" min="256" max="16384" step="256" value="16384" /><span class="slider-val" id="maxTokensVal">16384</span></div>
+      <div class="settings-card"><h4>Top P</h4><p>Controls diversity via nucleus sampling</p><input type="range" class="settings-slider" id="topPSlider" min="0" max="1" step="0.05" value="0.8" /><span class="slider-val" id="topPVal">0.8</span></div>
+      <div class="settings-card"><h4>Top K</h4><p>Limits vocabulary to top K tokens (0 = disabled)</p><input type="range" class="settings-slider" id="topKSlider" min="0" max="100" step="1" value="20" /><span class="slider-val" id="topKVal">20</span></div>
       <div class="settings-card"><h4>Frequency Penalty</h4><p>Reduces repetition of frequent words</p><input type="range" class="settings-slider" id="freqSlider" min="0" max="2" step="0.1" value="0" /><span class="slider-val" id="freqVal">0</span></div>
       <div class="settings-card"><h4>Presence Penalty</h4><p>Encourages exploring new topics</p><input type="range" class="settings-slider" id="presSlider" min="0" max="2" step="0.1" value="0" /><span class="slider-val" id="presVal">0</span></div>
     </div>
@@ -241,6 +207,7 @@
         <span>Username</span>
       </div>
       <button class="settings-nav active" data-panel="account">&#128100; Account</button>
+      <button class="settings-nav" data-panel="apikey">&#128273; API Key</button>
       <button class="settings-nav" data-panel="appearance">&#127912; Appearance</button>
       <button class="settings-nav" data-panel="systemprompt">&#9889; System Prompt</button>
       <button class="settings-nav" data-panel="memory">&#129504; Memory</button>
@@ -253,6 +220,16 @@
         <h2>Account</h2>
         <div class="account-info"><img src="https://api.dicebear.com/7.x/adventurer/svg?seed=arcus" class="account-avatar" alt="avatar"/><div><p><strong>Username</strong></p><p class="muted">username@email.com</p></div></div>
         <button class="danger-btn">Sign Out</button>
+      </div>
+      <div class="settings-panel" id="panel-apikey">
+        <h2>API Key</h2>
+        <p class="muted" style="margin-bottom:14px">Enter your NVIDIA NIM API key. Get one free at <a href="https://build.nvidia.com" target="_blank" class="about-link" style="display:inline">build.nvidia.com</a></p>
+        <label class="settings-label">NVIDIA API Key</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="apiKeyInput" class="modal-input" style="margin-bottom:0;flex:1" placeholder="nvapi-..." />
+          <button class="save-btn" id="saveApiKey">Save</button>
+        </div>
+        <p class="muted" style="margin-top:10px;font-size:11px">Your key is stored only in your browser's localStorage and never sent to any server other than NVIDIA.</p>
       </div>
       <div class="settings-panel" id="panel-appearance">
         <h2>Appearance</h2>
@@ -280,9 +257,9 @@
       <div class="settings-panel" id="panel-about">
         <h2>About Arcus</h2>
         <p>Version 1.0.0</p>
-        <p class="muted" style="margin-top:8px">A modern AI chat interface powered by cutting-edge language models via Puter.</p>
+        <p class="muted" style="margin-top:8px">Powered by NVIDIA NIM API. Models run on NVIDIA infrastructure.</p>
+        <a href="https://build.nvidia.com" target="_blank" class="about-link">NVIDIA Build Platform</a>
         <a href="#" class="about-link">Privacy Policy</a>
-        <a href="#" class="about-link">Terms of Service</a>
       </div>
     </div>
   </div>
@@ -293,30 +270,8 @@
   <div class="modal upgrade-modal">
     <button class="modal-close" id="closeUpgrade">&#10005;</button>
     <div class="upgrade-plans">
-      <div class="plan-card">
-        <h3 class="plan-name free">Free</h3>
-        <p class="plan-price">$0</p>
-        <ul class="plan-features">
-          <li>150 requests/day</li>
-          <li>Basic chat models</li>
-          <li>Web Search</li>
-          <li>Limited Studio Access</li>
-        </ul>
-        <button class="current-btn" disabled>Current</button>
-      </div>
-      <div class="plan-card pro-plan">
-        <h3 class="plan-name pro-label">Pro</h3>
-        <p class="plan-price">$19</p>
-        <ul class="plan-features">
-          <li>2,000 requests/day</li>
-          <li>All frontier models</li>
-          <li>Web Search</li>
-          <li>Full Studio and Agent access</li>
-          <li>Priority Support</li>
-          <li>Early access to new features</li>
-        </ul>
-        <button class="go-pro-btn">Go Pro</button>
-      </div>
+      <div class="plan-card"><h3 class="plan-name free">Free</h3><p class="plan-price">$0</p><ul class="plan-features"><li>150 requests/day</li><li>Basic chat models</li><li>Web Search</li><li>Limited Studio Access</li></ul><button class="current-btn" disabled>Current</button></div>
+      <div class="plan-card pro-plan"><h3 class="plan-name pro-label">Pro</h3><p class="plan-price">$19</p><ul class="plan-features"><li>2,000 requests/day</li><li>All frontier models</li><li>Web Search</li><li>Full Studio and Agent access</li><li>Priority Support</li><li>Early access to new features</li></ul><button class="go-pro-btn">Go Pro</button></div>
     </div>
   </div>
 </div>
@@ -326,10 +281,7 @@
   <div class="modal small-modal">
     <h3>Rename chat</h3>
     <input type="text" class="modal-input" id="renameInput" />
-    <div class="modal-actions">
-      <button class="cancel-btn" id="cancelRename">Cancel</button>
-      <button class="confirm-btn" id="confirmRename">Update</button>
-    </div>
+    <div class="modal-actions"><button class="cancel-btn" id="cancelRename">Cancel</button><button class="confirm-btn" id="confirmRename">Update</button></div>
   </div>
 </div>
 
@@ -338,10 +290,7 @@
   <div class="modal small-modal">
     <h3>Delete chat?</h3>
     <p class="modal-desc" id="deleteDesc">This will delete the chat.</p>
-    <div class="modal-actions">
-      <button class="cancel-btn" id="cancelDelete">Cancel</button>
-      <button class="delete-btn" id="confirmDelete">Delete</button>
-    </div>
+    <div class="modal-actions"><button class="cancel-btn" id="cancelDelete">Cancel</button><button class="delete-btn" id="confirmDelete">Delete</button></div>
   </div>
 </div>
 
@@ -351,10 +300,7 @@
     <button class="modal-close" id="closeFeedback">&#10005;</button>
     <h3>Send Feedback</h3>
     <textarea class="modal-textarea" placeholder="Tell us what you think..."></textarea>
-    <div class="modal-actions">
-      <button class="cancel-btn" id="cancelFeedback">Cancel</button>
-      <button class="confirm-btn">Submit</button>
-    </div>
+    <div class="modal-actions"><button class="cancel-btn" id="cancelFeedback">Cancel</button><button class="confirm-btn">Submit</button></div>
   </div>
 </div>
 
@@ -371,7 +317,7 @@
   </div>
 </div>
 
-<!-- UPGRADE BANNER (bottom right) -->
+<!-- UPGRADE BANNER -->
 <div class="upgrade-banner" id="upgradeBanner">
   <span>&#128142; Upgrade your plan</span>
   <button class="banner-close" id="closeBanner">&#10005;</button>
@@ -386,5 +332,28 @@
 </div>
 
 <script src="app.js"></script>
+<script>
+  // Load saved API key
+  const savedKey = localStorage.getItem('nvidia_api_key');
+  if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+  document.getElementById('saveApiKey').addEventListener('click', () => {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('nvidia_api_key', key);
+    document.getElementById('saveApiKey').textContent = 'Saved!';
+    setTimeout(() => document.getElementById('saveApiKey').textContent = 'Save', 1500);
+  });
+  // Override getApiKey to use localStorage too
+  window.getApiKey = function() {
+    return document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('nvidia_api_key') || '';
+  };
+  // Prompt tag fill
+  window.fillPrompt = function(text) {
+    const inp = document.getElementById('chatInput');
+    inp.value = text;
+    inp.focus();
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 180) + 'px';
+  };
+</script>
 </body>
 </html>
