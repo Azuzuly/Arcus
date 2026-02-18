@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arcus</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <button class="sidebar-toggle" id="sidebarToggle">&#8249;</button>
+  <button class="new-chat-btn" id="newChatBtn">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    New chat
+  </button>
+  <div class="chat-list" id="chatList">
+    <div class="chat-item active" data-id="1">
+      <span class="chat-icon">&#128172;</span> Mono Claw
+      <div class="chat-item-actions">
+        <button class="chat-action-btn" onclick="openRenameModal(1,'Mono Claw')">&#9998;</button>
+        <button class="chat-action-btn" onclick="openDeleteModal(1,'Mono Claw')">&#128465;</button>
+      </div>
+    </div>
+    <div class="chat-item" data-id="2">
+      <span class="chat-icon">&#127908;</span> Voice
+      <div class="chat-item-actions">
+        <button class="chat-action-btn" onclick="openRenameModal(2,'Voice')">&#9998;</button>
+        <button class="chat-action-btn" onclick="openDeleteModal(2,'Voice')">&#128465;</button>
+      </div>
+    </div>
+    <div class="chat-item" data-id="3">
+      <span class="chat-icon">&#128172;</span> test
+      <div class="chat-item-actions">
+        <button class="chat-action-btn" onclick="openRenameModal(3,'test')">&#9998;</button>
+        <button class="chat-action-btn" onclick="openDeleteModal(3,'test')">&#128465;</button>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <button class="chat-history-btn">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Chat History
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="home">Home</button>
+      <button class="tab-btn" data-tab="studio">Studio</button>
+      <button class="tab-btn" data-tab="agent">Agent</button>
+    </nav>
+    <div class="topbar-right">
+      <span class="username-label">Username</span>
+      <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=arcus" class="avatar" id="avatarBtn" alt="avatar" />
+    </div>
+  </div>
+
+  <!-- HOME TAB -->
+  <div class="tab-content active" id="tab-home">
+    <div class="hero">
+      <button class="model-selector" id="modelSelectorBtn">
+        <span id="selectedModel">Gemini 3</span>
+        <span class="model-sub">via Puter</span>
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <h1 class="hero-title">Hello there!<br/>How can I help you today?</h1>
+      <div class="prompt-tags">
+        <span class="prompt-tag">&#128269; Deep Research</span>
+        <span class="prompt-tag">&#9889; Quick Answer</span>
+        <span class="prompt-tag">&#128196; Summarize</span>
+        <span class="prompt-tag">&#128187; Write Code</span>
+        <span class="prompt-tag">&#127775; Creative</span>
+      </div>
+      <div class="input-box">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask Arcus" rows="1"></textarea>
+        <div class="input-actions">
+          <div class="input-left">
+            <button class="input-btn" id="uploadBtn" title="Upload files">
+              <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="input-btn" title="Web search">
+              <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="input-btn" id="chatSettingsBtn" title="Chat settings">
+              <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
+          <button class="send-btn" id="sendBtn">
+            <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="disclaimer">Arcus can make mistakes</p>
+    </div>
+  </div>
+
+  <!-- STUDIO TAB -->
+  <div class="tab-content" id="tab-studio">
+    <div class="studio-container">
+      <h2 class="tab-page-title">Studio</h2>
+      <p class="tab-page-sub">Create and fine-tune AI-generated content</p>
+      <div class="studio-grid">
+        <div class="studio-card">
+          <div class="studio-card-icon">&#127912;</div>
+          <h3>Image Generation</h3>
+          <p>Generate stunning images with AI. Describe what you want and let Arcus create it.</p>
+          <button class="card-btn">Open</button>
+        </div>
+        <div class="studio-card">
+          <div class="studio-card-icon">&#9997;&#65039;</div>
+          <h3>Content Writer</h3>
+          <p>Generate blog posts, social content, and more with AI-powered writing tools.</p>
+          <button class="card-btn">Open</button>
+        </div>
+        <div class="studio-card">
+          <div class="studio-card-icon">&#128266;</div>
+          <h3>Voice Synthesis</h3>
+          <p>Convert text to natural-sounding speech using advanced voice models.</p>
+          <button class="card-btn">Open</button>
+        </div>
+        <div class="studio-card">
+          <div class="studio-card-icon">&#127916;</div>
+          <h3>Video Creator</h3>
+          <p>Transform your ideas into videos with AI scene generation.</p>
+          <button class="card-btn">Open</button>
+        </div>
+        <div class="studio-card">
+          <div class="studio-card-icon">&#128202;</div>
+          <h3>Data Visualizer</h3>
+          <p>Turn raw data into beautiful charts and visual reports instantly.</p>
+          <button class="card-btn">Open</button>
+        </div>
+        <div class="studio-card">
+          <div class="studio-card-icon">&#128187;</div>
+          <h3>Code Studio</h3>
+          <p>Generate, review, and debug code with AI assistance.</p>
+          <button class="card-btn">Open</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT TAB -->
+  <div class="tab-content" id="tab-agent">
+    <div class="agent-container">
+      <h2 class="tab-page-title">Agent</h2>
+      <p class="tab-page-sub">Autonomous AI agents that work for you</p>
+      <div class="agent-list">
+        <div class="agent-card">
+          <div class="agent-status online"></div>
+          <div class="agent-info"><h3>Research Agent</h3><p>Browses the web and compiles research reports autonomously.</p></div>
+          <button class="card-btn">Run</button>
+        </div>
+        <div class="agent-card">
+          <div class="agent-status idle"></div>
+          <div class="agent-info"><h3>Code Agent</h3><p>Writes, tests, and deploys code across multiple files.</p></div>
+          <button class="card-btn">Run</button>
+        </div>
+        <div class="agent-card">
+          <div class="agent-status idle"></div>
+          <div class="agent-info"><h3>Automation Agent</h3><p>Handles repetitive tasks and workflow automation.</p></div>
+          <button class="card-btn">Run</button>
+        </div>
+        <div class="agent-card">
+          <div class="agent-status idle"></div>
+          <div class="agent-info"><h3>Data Agent</h3><p>Scrapes, cleans, and analyzes data from multiple sources.</p></div>
+          <button class="card-btn">Run</button>
+        </div>
+      </div>
+      <div class="agent-builder">
+        <h3>Build Custom Agent</h3>
+        <textarea class="agent-textarea" placeholder="Describe what your agent should do..."></textarea>
+        <button class="agent-build-btn">Create Agent</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FLOATING MENU -->
+<div class="floating-menu" id="floatingMenu">
+  <button class="float-btn" id="settingsMenuBtn">&#9881;&#65039; Settings</button>
+  <button class="float-btn" id="upgradeMenuBtn">&#11014;&#65039; Upgrade</button>
+  <button class="float-btn" id="feedbackMenuBtn">&#128172; Feedback</button>
+</div>
+<button class="floating-trigger" id="floatingTrigger">&#9776;</button>
+
+<!-- MODEL DROPDOWN -->
+<div class="dropdown-overlay" id="modelDropdown">
+  <div class="dropdown-panel">
+    <input type="text" class="dropdown-search" id="modelSearch" placeholder="Search Models" />
+    <div class="model-list" id="modelList">
+      <div class="model-item active" data-model="Gemini 3">Gemini 3 <span class="model-badge">via Puter</span></div>
+      <div class="model-item" data-model="Gemini 3 Pro">Gemini 3 Pro <span class="model-badge pro">Pro</span></div>
+      <div class="model-item" data-model="GPT-4o">GPT-4o <span class="model-badge">via Puter</span></div>
+      <div class="model-item" data-model="Claude 3.5 Sonnet">Claude 3.5 Sonnet <span class="model-badge">via Puter</span></div>
+      <div class="model-item" data-model="Llama 3.3 70B">Llama 3.3 70B <span class="model-badge">via Puter</span></div>
+      <div class="model-item" data-model="Mistral Large">Mistral Large <span class="model-badge">via Puter</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT SETTINGS MODAL -->
+<div class="modal-overlay" id="chatSettingsOverlay">
+  <div class="modal chat-settings-modal">
+    <div class="modal-header">
+      <h2>Chat Settings</h2>
+      <div class="modal-header-right">
+        <button class="reset-btn" id="resetSettingsBtn">Reset</button>
+        <button class="modal-close" id="closeChatSettings">&#10005;</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <label class="settings-label">System Prompt</label>
+      <textarea class="settings-textarea" id="systemPromptInput" placeholder="Instructions that guide the AI's behavior"></textarea>
+    </div>
+    <div class="settings-grid">
+      <div class="settings-card"><h4>Temperature</h4><p>Higher values make output more random, lower values more focused</p><input type="range" class="settings-slider" id="tempSlider" min="0" max="2" step="0.1" value="0.7" /><span class="slider-val" id="tempVal">0.7</span></div>
+      <div class="settings-card"><h4>Max Tokens</h4><p>Maximum length of the generated response</p><input type="range" class="settings-slider" id="maxTokensSlider" min="256" max="8192" step="256" value="2048" /><span class="slider-val" id="maxTokensVal">2048</span></div>
+      <div class="settings-card"><h4>Top P</h4><p>Controls diversity via nucleus sampling</p><input type="range" class="settings-slider" id="topPSlider" min="0" max="1" step="0.05" value="0.9" /><span class="slider-val" id="topPVal">0.9</span></div>
+      <div class="settings-card"><h4>Top K</h4><p>Limits vocabulary to top K tokens (0 = disabled)</p><input type="range" class="settings-slider" id="topKSlider" min="0" max="100" step="1" value="0" /><span class="slider-val" id="topKVal">0</span></div>
+      <div class="settings-card"><h4>Frequency Penalty</h4><p>Reduces repetition of frequent words</p><input type="range" class="settings-slider" id="freqSlider" min="0" max="2" step="0.1" value="0" /><span class="slider-val" id="freqVal">0</span></div>
+      <div class="settings-card"><h4>Presence Penalty</h4><p>Encourages exploring new topics</p><input type="range" class="settings-slider" id="presSlider" min="0" max="2" step="0.1" value="0" /><span class="slider-val" id="presVal">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS PAGE MODAL -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal settings-page-modal">
+    <div class="settings-sidebar">
+      <div class="settings-user">
+        <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=arcus" class="settings-avatar" alt="avatar"/>
+        <span>Username</span>
+      </div>
+      <button class="settings-nav active" data-panel="account">&#128100; Account</button>
+      <button class="settings-nav" data-panel="appearance">&#127912; Appearance</button>
+      <button class="settings-nav" data-panel="systemprompt">&#9889; System Prompt</button>
+      <button class="settings-nav" data-panel="memory">&#129504; Memory</button>
+      <button class="settings-nav" data-panel="usage">&#128202; Usage</button>
+      <button class="settings-nav" data-panel="about">&#8505;&#65039; About</button>
+    </div>
+    <div class="settings-content">
+      <button class="modal-close" id="closeSettings">&#10005;</button>
+      <div class="settings-panel active" id="panel-account">
+        <h2>Account</h2>
+        <div class="account-info"><img src="https://api.dicebear.com/7.x/adventurer/svg?seed=arcus" class="account-avatar" alt="avatar"/><div><p><strong>Username</strong></p><p class="muted">username@email.com</p></div></div>
+        <button class="danger-btn">Sign Out</button>
+      </div>
+      <div class="settings-panel" id="panel-appearance">
+        <h2>Appearance</h2>
+        <div class="appearance-option"><label>Theme</label><select class="settings-select"><option>Dark</option><option>Light</option><option>System</option></select></div>
+        <div class="appearance-option"><label>Font Size</label><select class="settings-select"><option>Small</option><option selected>Medium</option><option>Large</option></select></div>
+      </div>
+      <div class="settings-panel" id="panel-systemprompt">
+        <h2>System Prompt</h2>
+        <textarea class="settings-textarea full" placeholder="Enter a global system prompt..."></textarea>
+        <button class="save-btn">Save</button>
+      </div>
+      <div class="settings-panel" id="panel-memory">
+        <h2>Memory</h2>
+        <p class="muted">Arcus remembers things across conversations.</p>
+        <div class="memory-toggle"><label>Enable Memory</label><input type="checkbox" checked class="toggle-check"/></div>
+        <button class="danger-btn">Clear All Memory</button>
+      </div>
+      <div class="settings-panel" id="panel-usage">
+        <h2>Usage</h2>
+        <div class="usage-stat"><span>Requests Today</span><span class="stat-val">42 / 150</span></div>
+        <div class="usage-bar-wrap"><div class="usage-bar" style="width:28%"></div></div>
+        <div class="usage-stat"><span>Plan</span><span class="stat-val">Free</span></div>
+        <button class="save-btn" id="usageUpgradeBtn" style="margin-top:14px">Upgrade to Pro</button>
+      </div>
+      <div class="settings-panel" id="panel-about">
+        <h2>About Arcus</h2>
+        <p>Version 1.0.0</p>
+        <p class="muted" style="margin-top:8px">A modern AI chat interface powered by cutting-edge language models via Puter.</p>
+        <a href="#" class="about-link">Privacy Policy</a>
+        <a href="#" class="about-link">Terms of Service</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="modal-overlay" id="upgradeOverlay">
+  <div class="modal upgrade-modal">
+    <button class="modal-close" id="closeUpgrade">&#10005;</button>
+    <div class="upgrade-plans">
+      <div class="plan-card">
+        <h3 class="plan-name free">Free</h3>
+        <p class="plan-price">$0</p>
+        <ul class="plan-features">
+          <li>150 requests/day</li>
+          <li>Basic chat models</li>
+          <li>Web Search</li>
+          <li>Limited Studio Access</li>
+        </ul>
+        <button class="current-btn" disabled>Current</button>
+      </div>
+      <div class="plan-card pro-plan">
+        <h3 class="plan-name pro-label">Pro</h3>
+        <p class="plan-price">$19</p>
+        <ul class="plan-features">
+          <li>2,000 requests/day</li>
+          <li>All frontier models</li>
+          <li>Web Search</li>
+          <li>Full Studio and Agent access</li>
+          <li>Priority Support</li>
+          <li>Early access to new features</li>
+        </ul>
+        <button class="go-pro-btn">Go Pro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div class="modal-overlay" id="renameOverlay">
+  <div class="modal small-modal">
+    <h3>Rename chat</h3>
+    <input type="text" class="modal-input" id="renameInput" />
+    <div class="modal-actions">
+      <button class="cancel-btn" id="cancelRename">Cancel</button>
+      <button class="confirm-btn" id="confirmRename">Update</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteOverlay">
+  <div class="modal small-modal">
+    <h3>Delete chat?</h3>
+    <p class="modal-desc" id="deleteDesc">This will delete the chat.</p>
+    <div class="modal-actions">
+      <button class="cancel-btn" id="cancelDelete">Cancel</button>
+      <button class="delete-btn" id="confirmDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay" id="feedbackOverlay">
+  <div class="modal small-modal">
+    <button class="modal-close" id="closeFeedback">&#10005;</button>
+    <h3>Send Feedback</h3>
+    <textarea class="modal-textarea" placeholder="Tell us what you think..."></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" id="cancelFeedback">Cancel</button>
+      <button class="confirm-btn">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRO UPSELL -->
+<div class="modal-overlay" id="proUpsellOverlay">
+  <div class="modal small-modal pro-upsell">
+    <button class="modal-close" id="closeProUpsell">&#10005;</button>
+    <h3 class="pro-upsell-title">Pro</h3>
+    <ul class="upsell-list">
+      <li><span class="radio-dot active"></span> Manifesting extended features with this post</li>
+      <li><span class="radio-dot"></span> Unlock the good stuff</li>
+    </ul>
+    <button class="upgrade-btn" id="upsellUpgradeBtn">Upgrade</button>
+  </div>
+</div>
+
+<!-- UPGRADE BANNER (bottom right) -->
+<div class="upgrade-banner" id="upgradeBanner">
+  <span>&#128142; Upgrade your plan</span>
+  <button class="banner-close" id="closeBanner">&#10005;</button>
+</div>
+
+<!-- UPLOAD POPUP -->
+<div class="upload-popup" id="uploadPopup">
+  <button class="upload-popup-close" id="closeUploadPopup">&#10005;</button>
+  <p>&#128206; Upload files</p>
+  <div class="upload-drop">Drop files here or <label class="upload-label">browse<input type="file" multiple hidden id="fileInput"/></label></div>
+  <div class="uploaded-files" id="uploadedFiles"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
