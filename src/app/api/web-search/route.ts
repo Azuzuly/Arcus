@@ -6,24 +6,37 @@ interface SearchResult {
   snippet: string;
 }
 
+function sanitizePlainText(value: string | undefined): string {
+  if (!value) return '';
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isTopicItem(value: unknown): value is {
+  Text?: string;
+  FirstURL?: string;
+  Result?: string;
+  Name?: string;
+  Topics?: unknown[];
+} {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function collectTopics(items: unknown[], results: SearchResult[] = []): SearchResult[] {
   for (const item of items) {
-    if (!item || typeof item !== 'object') continue;
-    const topic = item as {
-      Text?: string;
-      FirstURL?: string;
-      Result?: string;
-      Name?: string;
-      Topics?: unknown[];
-    };
+    if (!isTopicItem(item)) continue;
+    const topic = item;
 
     if (Array.isArray(topic.Topics)) {
       collectTopics(topic.Topics, results);
       continue;
     }
 
-    const title = topic.Text?.split(' - ')[0] || topic.Name || 'Result';
-    const snippet = topic.Text || topic.Result?.replace(/<[^>]+>/g, '') || '';
+    const title = sanitizePlainText(topic.Text?.split(' - ')[0] || topic.Name || 'Result');
+    const snippet = sanitizePlainText(topic.Text || topic.Result || '');
     const url = topic.FirstURL || '';
     if (snippet && url) {
       results.push({ title, url, snippet });
@@ -71,16 +84,20 @@ export async function POST(request: NextRequest) {
 
     if (data.AbstractText && data.AbstractURL) {
       results.push({
-        title: data.Heading || query,
+        title: sanitizePlainText(data.Heading || query),
         url: data.AbstractURL,
-        snippet: data.AbstractText,
+        snippet: sanitizePlainText(data.AbstractText),
       });
     }
 
     if (Array.isArray(data.Results)) {
       for (const item of data.Results) {
         if (item.Text && item.FirstURL) {
-          results.push({ title: item.Text.split(' - ')[0], url: item.FirstURL, snippet: item.Text });
+          results.push({
+            title: sanitizePlainText(item.Text.split(' - ')[0]),
+            url: item.FirstURL,
+            snippet: sanitizePlainText(item.Text),
+          });
         }
       }
     }
@@ -89,9 +106,12 @@ export async function POST(request: NextRequest) {
       collectTopics(data.RelatedTopics, results);
     }
 
-    const uniqueResults = results.filter((item, index, array) =>
-      item.snippet && array.findIndex(candidate => candidate.url === item.url) === index
-    );
+    const seenUrls = new Set<string>();
+    const uniqueResults = results.filter(item => {
+      if (!item.snippet || seenUrls.has(item.url)) return false;
+      seenUrls.add(item.url);
+      return true;
+    });
 
     return NextResponse.json({
       query,

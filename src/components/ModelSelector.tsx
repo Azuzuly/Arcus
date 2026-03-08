@@ -57,7 +57,9 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
     const handler = (event: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
     };
-    const timer = window.setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    const timer = window.setTimeout(() => {
+      document.addEventListener('mousedown', handler);
+    }, 0);
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener('mousedown', handler);

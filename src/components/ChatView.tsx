@@ -10,6 +10,8 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ModelSelector from './ModelSelector';
 
+const DEFAULT_CHAT_TITLE = 'New Chat';
+
 function ProviderLogo({ modelId }: { modelId: string }) {
   const provider = getProviderMeta(modelId);
 
@@ -164,7 +166,7 @@ export default function ChatView() {
           dispatch({ type: 'SET_STREAMING', streaming: false });
           dispatch({ type: 'TRACK_REQUEST', modelId: state.selectedModel.id, tokens: Math.ceil(full.length / 4) });
 
-          if ((conv?.title || 'New Chat') === 'New Chat') {
+          if ((conv?.title || DEFAULT_CHAT_TITLE) === DEFAULT_CHAT_TITLE) {
             chatCompletion(
               [{ role: 'user', content: `Summarize in 5 words or less: ${content}` }],
               { model: state.selectedModel.id }

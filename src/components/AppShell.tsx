@@ -16,13 +16,15 @@ import RenameModal from './RenameModal';
 import DeleteModal from './DeleteModal';
 import AuroraBackground from './AuroraBackground';
 
+const DEFAULT_ACCENT_RGB = '59, 130, 246';
+
 function hexToRgb(hex: string): string {
   const normalized = hex.replace('#', '');
   const value = normalized.length === 3
     ? normalized.split('').map(char => char + char).join('')
     : normalized;
 
-  if (value.length !== 6) return '59, 130, 246';
+  if (value.length !== 6 || !/^[\da-fA-F]{6}$/.test(value)) return DEFAULT_ACCENT_RGB;
 
   const num = Number.parseInt(value, 16);
   return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;

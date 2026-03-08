@@ -58,6 +58,7 @@ const SUB_TABS = [
   { id: 'upscale', label: 'Upscale', desc: 'Higher resolution exports are coming soon' },
   { id: 'describe', label: 'Describe', desc: 'Image-to-prompt tools are coming soon' },
 ];
+const DEFAULT_STEPS = 28;
 
 function buildPollinationsUrl(options: {
   prompt: string;
@@ -94,7 +95,7 @@ export default function StudioView() {
   const [aspect, setAspect] = useState('1:1');
   const [showNeg, setShowNeg] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [steps, setSteps] = useState(28);
+  const [steps, setSteps] = useState(DEFAULT_STEPS);
   const [cfg, setCfg] = useState(7);
   const [seed, setSeed] = useState('');
   const [count, setCount] = useState(1);
@@ -110,7 +111,7 @@ export default function StudioView() {
   const handleGenerate = () => {
     if (!prompt.trim() || unavailable) return;
 
-    const nextItems = Array.from({ length: count }, (_, index) => {
+    const newGenerations = Array.from({ length: count }, (_, index) => {
       const id = crypto.randomUUID();
       const imageUrl = buildPollinationsUrl({
         prompt,
@@ -133,8 +134,8 @@ export default function StudioView() {
       };
     });
 
-    setHistory(prev => [...nextItems, ...prev]);
-    setSelected(nextItems[0]);
+    setHistory(prev => [...newGenerations, ...prev]);
+    setSelected(newGenerations[0]);
   };
 
   const markGenerationLoaded = (id: string) => {

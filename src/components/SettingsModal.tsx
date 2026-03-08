@@ -91,6 +91,7 @@ export default function SettingsModal() {
   };
 
   const clearData = () => {
+    if (!window.confirm('Clear all Arcus data and reset the app?')) return;
     clearAllStorage();
     window.location.reload();
   };
@@ -249,12 +250,12 @@ export default function SettingsModal() {
                   <input type="range" min={20} max={95} value={Math.round(state.settings.wallpaperOpacity * 100)} onChange={event => dispatch({ type: 'SET_SETTINGS', settings: { wallpaperOpacity: Number(event.target.value) / 100 } })} />
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+                <label htmlFor="ambient-motion-toggle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>Ambient motion</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>Toggle subtle background animation.</div>
                   </div>
-                  <input type="checkbox" checked={state.settings.showAnimations} onChange={event => dispatch({ type: 'SET_SETTINGS', settings: { showAnimations: event.target.checked } })} />
+                  <input id="ambient-motion-toggle" type="checkbox" checked={state.settings.showAnimations} onChange={event => dispatch({ type: 'SET_SETTINGS', settings: { showAnimations: event.target.checked } })} />
                 </label>
 
                 <button onClick={saveAppearance} style={{ width: 'fit-content', padding: '10px 16px', background: 'var(--accent-blue)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Save appearance</button>
@@ -301,12 +302,12 @@ export default function SettingsModal() {
                 <h3 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8 }}>Memory</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Keep reusable facts about the user and control whether Arcus can use them.</p>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 18, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+              <label htmlFor="memory-toggle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 18, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>Enable memory</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>When enabled, Arcus can inject saved facts into responses.</div>
                 </div>
-                <input type="checkbox" checked={state.memory.enabled} onChange={event => dispatch({ type: 'SET_MEMORY', memory: { enabled: event.target.checked } })} />
+                <input id="memory-toggle" type="checkbox" checked={state.memory.enabled} onChange={event => dispatch({ type: 'SET_MEMORY', memory: { enabled: event.target.checked } })} />
               </label>
 
               <div style={{ padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', display: 'grid', gap: 14 }}>

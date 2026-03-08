@@ -9,6 +9,22 @@ const DEFAULT_MODES: PromptModes = {
   webSearch: false,
   personalization: false,
 };
+const BOTTOM_MODE_KEYS: Array<keyof PromptModes> = ['webSearch', 'personalization'];
+
+// Deep research always depends on live search context, so enabling it also enables web search.
+// If the user turns off web search while deep research is active, both modes are disabled together.
+function getNextModes(previous: PromptModes, mode: keyof PromptModes): PromptModes {
+  if (mode === 'deepResearch') {
+    const deepResearch = !previous.deepResearch;
+    return { ...previous, deepResearch, webSearch: deepResearch || previous.webSearch };
+  }
+
+  if (mode === 'webSearch' && previous.deepResearch) {
+    return { ...previous, deepResearch: false, webSearch: false };
+  }
+
+  return { ...previous, [mode]: !previous[mode] };
+}
 
 const MODE_CHIPS: Array<{ key: keyof PromptModes; label: string; icon: string; hint: string }> = [
   { key: 'deepResearch', label: 'Deep Research', icon: '✦', hint: 'Search more broadly and answer with structure' },
@@ -34,18 +50,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, modes:
   }, []);
 
   const toggleMode = useCallback((mode: keyof PromptModes) => {
-    setModes(prev => {
-      if (mode === 'deepResearch' && !prev.deepResearch) {
-        return { ...prev, deepResearch: true, webSearch: true };
-      }
-      if (mode === 'webSearch' && prev.deepResearch && prev.webSearch) {
-        return { ...prev, deepResearch: false, webSearch: false };
-      }
-      if (mode === 'webSearch' && prev.deepResearch) {
-        return { ...prev, webSearch: true };
-      }
-      return { ...prev, [mode]: !prev[mode] };
-    });
+    setModes(prev => getNextModes(prev, mode));
   }, []);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,7 +200,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, modes:
             >
               +
             </button>
-            {(['webSearch', 'personalization'] as Array<keyof PromptModes>).map(mode => {
+            {BOTTOM_MODE_KEYS.map(mode => {
               const active = modes[mode];
               const label = mode === 'webSearch' ? 'Web Search' : 'Personalization';
               const icon = mode === 'webSearch' ? '⌕' : '◌';

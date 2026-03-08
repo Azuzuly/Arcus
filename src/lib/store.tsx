@@ -207,7 +207,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const memory = getStorage<AppState['memory']>('memory', { enabled: true, items: [] });
     const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
     const favorites = getStorage<string[]>('favorites', []);
-      const savedSettings = getStorage<Partial<AppState['settings']>>('settings', DEFAULT_SETTINGS);
+      const savedSettings = getStorage<AppState['settings']>('settings', DEFAULT_SETTINGS);
 
     dispatch({
       type: 'INIT',
