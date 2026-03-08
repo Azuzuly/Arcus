@@ -7,7 +7,7 @@
         "@insforge/mcp@latest"
       ],
       "env": {
-        "API_KEY": "ik_a93a5c5093696a199409efdfaa641f85",
+        "API_KEY": "${env:INSFORGE_API_KEY}",
         "API_BASE_URL": "https://hv3ykc96.us-east.insforge.app"
       }
     }
