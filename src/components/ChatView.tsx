@@ -182,10 +182,11 @@ export default function ChatView() {
   const activeConv = state.conversations.find(c => c.id === state.activeChatId);
   const isEmpty = !activeConv || activeConv.messages.length === 0;
   const emptyHeroPaddingTop = 138;
+  const lastMessageContent = activeConv?.messages?.[activeConv?.messages.length - 1]?.content;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConv?.messages?.length, activeConv?.messages?.[activeConv?.messages?.length - 1]?.content]);
+  }, [activeConv?.messages?.length, lastMessageContent]);
 
   const quickPrompts = [
     'Compare the top options and cite trade-offs',
@@ -291,6 +292,7 @@ export default function ChatView() {
       apiMessages,
       {
         model: state.selectedModel.id,
+        runtime: state.selectedModel.runtime,
         temperature: state.chatSettings.temperature,
         maxTokens: state.chatSettings.maxTokens,
         topP: state.chatSettings.topP,
@@ -332,7 +334,7 @@ export default function ChatView() {
           if (convNow && convNow.title === 'New Chat') {
             chatCompletion(
               [{ role: 'user', content: `Summarize in 5 words or less: ${content}` }],
-              { model: state.selectedModel.id }
+              { model: state.selectedModel.id, runtime: state.selectedModel.runtime }
             ).then(title => {
               if (title) dispatch({ type: 'UPDATE_CONVERSATION', id: chatId, updates: { title: title.trim().replace(/^"|"$/g, '') } });
             }).catch(() => {});

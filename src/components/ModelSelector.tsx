@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useStore } from '@/lib/store';
@@ -38,6 +39,10 @@ function getModalities(m: ModelInfo): { emoji: string; label: string }[] {
   if (inp.includes('video')) result.push({ emoji: '🎥', label: 'Video' });
   if (out.includes('image')) result.push({ emoji: '🎨', label: 'Image Gen' });
   return result;
+}
+
+function getRuntimeLabel(runtime?: 'puter' | 'openrouter'): string {
+  return runtime === 'openrouter' ? 'OpenRouter' : 'Puter';
 }
 
 export default function ModelSelector({ onClose }: { onClose: () => void }) {
@@ -82,7 +87,7 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
   }, [filtered, state.favoriteModelIds]);
 
   const selectModel = (m: ModelInfo) => {
-    dispatch({ type: 'SET_SELECTED_MODEL', model: { id: m.id, name: m.name, provider: getProviderName(m.id) } });
+    dispatch({ type: 'SET_SELECTED_MODEL', model: { id: m.id, name: m.name, provider: getProviderName(m.id), runtime: m.runtime } });
     onClose();
   };
 
@@ -141,7 +146,10 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
                   onFocus={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                   onBlur={e => { if (state.selectedModel.id !== m.id) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>{m.name}</span>
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{getRuntimeLabel(m.runtime)}</span>
+                  </span>
                   <button onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_FAVORITE_MODEL', modelId: m.id }); }}
                     style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, color: state.favoriteModelIds.includes(m.id) ? '#F59E0B' : 'rgba(255,255,255,0.15)', padding: '0 2px' }}>
                     ★
@@ -171,6 +179,7 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
                 <span>{getProviderEmoji(preview.id)}</span>
               )}
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{getProviderName(preview.id)}</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', padding: '3px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>{getRuntimeLabel(preview.runtime)}</span>
             </div>
           </div>
 

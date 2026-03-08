@@ -1,4 +1,4 @@
-export const brandLogoUrl = '/logos/brand/Arcus.PNG';
+export const brandLogoUrl = '/logos/brand/arcus-logo.svg';
 
 export const providerLogos: Record<string, string> = {
   anthropic: '/logos/providers/Anthropic.png',

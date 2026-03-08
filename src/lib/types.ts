@@ -68,6 +68,7 @@ export interface Conversation {
 export interface ModelInfo {
   id: string;
   name: string;
+  runtime?: 'puter' | 'openrouter';
   description?: string;
   created?: number;
   context_length?: number;
@@ -89,6 +90,7 @@ export interface SelectedModel {
   id: string;
   name: string;
   provider: string;
+  runtime?: 'puter' | 'openrouter';
 }
 
 export interface MemoryItem {

@@ -7,7 +7,7 @@ import {
   AgentNode, AgentEdge, ExecutionLogEntry, StudioGeneration, PersonalizationSettings,
 } from './types';
 import { getStorage, setStorage, clearAllStorage } from './storage';
-import { generateUUID, getAvatarInitials, getAvatarColor } from './utils';
+import { generateUUID } from './utils';
 import { insforge } from './insforge';
 import { createGuestUserState, mapInsforgeUserToStateUser } from './auth';
 import { fetchRemoteConversations, syncRemoteConversations } from './remoteSync';
@@ -48,7 +48,7 @@ const DEFAULT_PREFERENCES: PersonalizationSettings = {
   trustedDomains: [],
 };
 
-const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic' };
+const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', runtime: 'puter' };
 
 function sortConversations(conversations: Conversation[]): Conversation[] {
   return [...conversations].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);

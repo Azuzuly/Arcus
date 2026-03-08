@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ModelInfo } from './types';
 
-// Puter.js global - loaded via script tag in layout.tsx
-declare const puter: any;
-
 function getPuter(): any {
   if (typeof window !== 'undefined' && (window as any).puter) {
     return (window as any).puter;
@@ -39,6 +36,7 @@ function toModelInfo(raw: any): ModelInfo | null {
   return {
     id,
     name,
+    runtime: 'puter',
     description: typeof raw?.description === 'string' ? raw.description : undefined,
     created: typeof raw?.created === 'number' ? raw.created : 0,
     context_length: Number(raw?.context_length || raw?.contextWindow || raw?.max_context_tokens || 0) || undefined,
@@ -56,6 +54,47 @@ function toModelInfo(raw: any): ModelInfo | null {
     },
     provider: normalizeProviderName(providerKey),
   } as ModelInfo;
+}
+
+function normalizeOpenRouterModel(raw: any): ModelInfo | null {
+  const id = String(raw?.id || '').trim();
+  if (!id) return null;
+
+  const providerKey = id.split('/')[0]?.toLowerCase() || 'openrouter';
+
+  return {
+    id,
+    name: String(raw?.name || id.split('/').pop() || id).replace(/[-_]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()),
+    runtime: 'openrouter',
+    description: typeof raw?.description === 'string' ? raw.description : undefined,
+    created: typeof raw?.created === 'number' ? raw.created : 0,
+    context_length: Number(raw?.context_length || raw?.contextWindow || raw?.top_provider?.context_length || 0) || undefined,
+    pricing: {
+      prompt: raw?.pricing?.prompt?.toString?.(),
+      completion: raw?.pricing?.completion?.toString?.(),
+    },
+    top_provider: {
+      max_completion_tokens: Number(raw?.top_provider?.max_completion_tokens || 0) || undefined,
+    },
+    architecture: {
+      input_modalities: Array.isArray(raw?.architecture?.input_modalities) ? raw.architecture.input_modalities : ['text'],
+      output_modalities: Array.isArray(raw?.architecture?.output_modalities) ? raw.architecture.output_modalities : ['text'],
+      modality: raw?.architecture?.modality,
+    },
+    provider: normalizeProviderName(providerKey),
+  } as ModelInfo;
+}
+
+async function fetchOpenRouterModels(): Promise<ModelInfo[]> {
+  try {
+    const response = await fetch('/api/models', { cache: 'no-store' });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    const models = Array.isArray(payload?.models) ? payload.models : [];
+    return models.map(normalizeOpenRouterModel).filter((model: ModelInfo | null): model is ModelInfo => Boolean(model));
+  } catch {
+    return [];
+  }
 }
 
 async function tryGetPuterModelDirectory(p: any): Promise<ModelInfo[] | null> {
@@ -127,8 +166,9 @@ const CURATED_MODELS: ModelInfo[] = [
 export async function fetchModels(): Promise<ModelInfo[]> {
   const p = getPuter();
   const liveModels = p ? await tryGetPuterModelDirectory(p) : null;
+  const openRouterModels = await fetchOpenRouterModels();
 
-  return [...(liveModels || []), ...CURATED_MODELS]
+  return [...(liveModels || []), ...openRouterModels, ...CURATED_MODELS.map(model => ({ ...model, runtime: model.runtime || 'puter' as const }))]
     .reduce<ModelInfo[]>((acc, model) => {
       if (acc.some(existing => existing.id === model.id)) return acc;
       acc.push(model);
@@ -143,7 +183,7 @@ export interface StreamCallbacks {
   onError: (error: string) => void;
 }
 
-export async function streamChatCompletion(
+async function streamOpenRouterCompletion(
   messages: { role: string; content: string }[],
   options: {
     model?: string;
@@ -157,9 +197,82 @@ export async function streamChatCompletion(
   callbacks: StreamCallbacks,
   signal?: AbortSignal
 ): Promise<void> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, options, stream: true }),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    const payload = await response.json().catch(() => ({}));
+    callbacks.onError(payload?.error || 'OpenRouter request failed');
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullContent = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const text = decoder.decode(value, { stream: true });
+    if (!text) continue;
+    fullContent += text;
+    callbacks.onChunk(text, fullContent);
+  }
+
+  callbacks.onDone(fullContent);
+}
+
+async function openRouterChatCompletion(
+  messages: { role: string; content: string }[],
+  options: { model?: string }
+): Promise<string> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, options, stream: false }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.error || 'OpenRouter request failed');
+  }
+
+  const payload = await response.json();
+  return String(payload?.content || '');
+}
+
+export async function streamChatCompletion(
+  messages: { role: string; content: string }[],
+  options: {
+    model?: string;
+    runtime?: 'puter' | 'openrouter';
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    topK?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+  },
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  if (options.runtime === 'openrouter') {
+    await streamOpenRouterCompletion(
+      messages,
+      options,
+      callbacks,
+      signal
+    );
+    return;
+  }
+
   const p = getPuter();
   if (!p) {
-    callbacks.onError('Puter.js not loaded yet. Please refresh the page.');
+    await streamOpenRouterCompletion(messages, options, callbacks, signal);
     return;
   }
 
@@ -190,24 +303,37 @@ export async function streamChatCompletion(
     callbacks.onDone(fullContent);
   } catch (err: any) {
     if (err?.name === 'AbortError') return;
-    callbacks.onError(err?.message || 'Unknown error');
+    try {
+      await streamOpenRouterCompletion(messages, options, callbacks, signal);
+    } catch {
+      callbacks.onError(err?.message || 'Unknown error');
+    }
   }
 }
 
 export async function chatCompletion(
   messages: { role: string; content: string }[],
-  options: { model?: string }
+  options: { model?: string; runtime?: 'puter' | 'openrouter' }
 ): Promise<string> {
+  if (options.runtime === 'openrouter') {
+    return openRouterChatCompletion(messages, { model: options.model });
+  }
+
   const p = getPuter();
-  if (!p) throw new Error('Puter.js not loaded');
+  if (!p) {
+    return openRouterChatCompletion(messages, options);
+  }
 
-  const puterMessages = messages.map(m => ({ role: m.role, content: m.content }));
-  const response = await p.ai.chat(puterMessages, {
-    model: options.model || 'anthropic/claude-opus-4',
-  });
+  try {
+    const puterMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    const response = await p.ai.chat(puterMessages, {
+      model: options.model || 'anthropic/claude-opus-4',
+    });
 
-  // Non-streaming returns a response object
-  return response?.message?.content || response?.toString?.() || '';
+    return response?.message?.content || response?.toString?.() || '';
+  } catch {
+    return openRouterChatCompletion(messages, options);
+  }
 }
 
 // Legacy: test API key (no longer needed with Puter, always returns true)

@@ -18,6 +18,16 @@ interface MessageRow {
   created_at: string;
 }
 
+function isMissingSyncSchemaError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error && 'message' in error
+      ? String((error as { message?: unknown }).message || '')
+      : '';
+
+  return /relation .* does not exist|table .* does not exist|conversations|messages/i.test(message);
+}
+
 function toTimestamp(value: string | null | undefined, fallback: number): number {
   const parsed = value ? Date.parse(value) : NaN;
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -29,13 +39,13 @@ function serializeModel(model: SelectedModel): string {
 
 function deserializeModel(value: string | null | undefined): SelectedModel {
   if (!value) {
-    return { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic' };
+    return { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', runtime: 'puter' };
   }
 
   try {
     const parsed = JSON.parse(value) as Partial<SelectedModel>;
     if (parsed.id && parsed.name && parsed.provider) {
-      return { id: parsed.id, name: parsed.name, provider: parsed.provider };
+      return { id: parsed.id, name: parsed.name, provider: parsed.provider, runtime: parsed.runtime || 'puter' };
     }
   } catch {
     // fall back below
@@ -45,6 +55,7 @@ function deserializeModel(value: string | null | undefined): SelectedModel {
     id: value,
     name: value.split('/').pop()?.replace(/[-_]/g, ' ') || 'Saved Model',
     provider: value.split('/')[0] || 'Unknown',
+    runtime: 'puter',
   };
 }
 
@@ -55,7 +66,10 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingSyncSchemaError(error)) return [];
+    throw error;
+  }
 
   const rows = (conversations || []) as ConversationRow[];
   if (rows.length === 0) return [];
@@ -67,7 +81,10 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
     .in('conversation_id', ids)
     .order('created_at', { ascending: true });
 
-  if (messagesError) throw messagesError;
+  if (messagesError) {
+    if (isMissingSyncSchemaError(messagesError)) return [];
+    throw messagesError;
+  }
 
   const messageRows = (messages || []) as MessageRow[];
   const groupedMessages = new Map<string, Message[]>();
@@ -107,15 +124,21 @@ export async function syncRemoteConversations(userId: string, conversations: Con
     .select('id')
     .eq('user_id', userId);
 
-  if (existingError) throw existingError;
+  if (existingError) {
+    if (isMissingSyncSchemaError(existingError)) return;
+    throw existingError;
+  }
 
   const existingIds = new Set(((existingData || []) as Array<{ id: string }>).map(row => row.id));
   const localIds = new Set(safeConversations.map(conversation => conversation.id));
   const remoteOnlyIds = [...existingIds].filter(id => !localIds.has(id));
 
   if (remoteOnlyIds.length > 0) {
-    await insforge.database.from('messages').delete().in('conversation_id', remoteOnlyIds);
-    await insforge.database.from('conversations').delete().in('id', remoteOnlyIds);
+    const { error: deleteRemoteMessagesError } = await insforge.database.from('messages').delete().in('conversation_id', remoteOnlyIds);
+    if (deleteRemoteMessagesError && !isMissingSyncSchemaError(deleteRemoteMessagesError)) throw deleteRemoteMessagesError;
+
+    const { error: deleteRemoteConversationsError } = await insforge.database.from('conversations').delete().in('id', remoteOnlyIds);
+    if (deleteRemoteConversationsError && !isMissingSyncSchemaError(deleteRemoteConversationsError)) throw deleteRemoteConversationsError;
   }
 
   for (const conversation of safeConversations) {
@@ -139,10 +162,16 @@ export async function syncRemoteConversations(userId: string, conversations: Con
         .eq('id', conversation.id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        if (isMissingSyncSchemaError(error)) return;
+        throw error;
+      }
     } else {
       const { error } = await insforge.database.from('conversations').insert(payload);
-      if (error) throw error;
+      if (error) {
+        if (isMissingSyncSchemaError(error)) return;
+        throw error;
+      }
     }
 
     const { error: deleteMessagesError } = await insforge.database
@@ -150,7 +179,10 @@ export async function syncRemoteConversations(userId: string, conversations: Con
       .delete()
       .eq('conversation_id', conversation.id);
 
-    if (deleteMessagesError) throw deleteMessagesError;
+    if (deleteMessagesError) {
+      if (isMissingSyncSchemaError(deleteMessagesError)) return;
+      throw deleteMessagesError;
+    }
 
     if (conversation.messages.length > 0) {
       const messagePayload = conversation.messages.map(message => ({
@@ -162,7 +194,10 @@ export async function syncRemoteConversations(userId: string, conversations: Con
       }));
 
       const { error: insertMessagesError } = await insforge.database.from('messages').insert(messagePayload);
-      if (insertMessagesError) throw insertMessagesError;
+      if (insertMessagesError) {
+        if (isMissingSyncSchemaError(insertMessagesError)) return;
+        throw insertMessagesError;
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState } from 'react';
@@ -51,23 +52,28 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
       height: '100vh', background: 'transparent', color: '#fff',
       fontFamily: "'Geist', -apple-system, sans-serif", overflowX: 'hidden', overflowY: 'auto',
     }}>
-      {/* Aurora bg */}
+      {/* Night background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0a0e18 0%, #090c14 42%, #07090f 100%)' }} />
         <div style={{
-          position: 'absolute', top: '-30%', left: '10%', width: '80%', height: '60%',
-          background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.06) 40%, transparent 70%)',
-          filter: 'blur(80px)', animation: 'aurora 12s ease-in-out infinite',
+          position: 'absolute', top: '-18%', left: '8%', width: '72%', height: '52%',
+          background: 'radial-gradient(ellipse at center, rgba(61,100,171,0.12) 0%, rgba(32,57,103,0.05) 42%, transparent 72%)',
+          filter: 'blur(74px)', animation: 'aurora 14s ease-in-out infinite',
         }} />
         <div style={{
-          position: 'absolute', top: '20%', right: '-10%', width: '50%', height: '50%',
-          background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 40%, transparent 70%)',
-          filter: 'blur(100px)', animation: 'aurora 15s ease-in-out infinite reverse',
+          position: 'absolute', top: '18%', right: '-8%', width: '48%', height: '48%',
+          background: 'radial-gradient(ellipse at center, rgba(91,127,192,0.08) 0%, rgba(59,130,246,0.03) 40%, transparent 70%)',
+          filter: 'blur(86px)', animation: 'aurora 17s ease-in-out infinite reverse',
         }} />
         <div style={{
-          position: 'absolute', bottom: '-20%', left: '30%', width: '60%', height: '50%',
-          background: 'radial-gradient(ellipse at center, rgba(6,182,212,0.06) 0%, transparent 60%)',
-          filter: 'blur(90px)', animation: 'aurora 18s ease-in-out infinite',
+          position: 'absolute', bottom: '-20%', left: '26%', width: '58%', height: '44%',
+          background: 'radial-gradient(ellipse at center, rgba(34,107,133,0.06) 0%, transparent 60%)',
+          filter: 'blur(84px)', animation: 'aurora 18s ease-in-out infinite',
         }} />
+        <div style={{ position: 'absolute', inset: 'auto 0 0 0', height: 180, background: 'linear-gradient(180deg, rgba(5,8,14,0) 0%, rgba(5,8,14,0.82) 38%, #04070c 100%)' }} />
+        <svg viewBox="0 0 1440 220" preserveAspectRatio="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: 170, opacity: 0.95 }}>
+          <path d="M0 220 L0 136 L70 150 L118 98 L166 154 L224 92 L284 162 L332 116 L392 168 L456 102 L528 172 L612 92 L684 164 L762 108 L846 176 L930 94 L1006 166 L1088 112 L1170 178 L1248 118 L1332 170 L1440 140 L1440 220 Z" fill="#04060a" />
+        </svg>
       </div>
 
       {/* Nav */}
@@ -75,10 +81,11 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px clamp(16px, 4vw, 40px)', maxWidth: 1200, margin: '0 auto',
-        background: 'rgba(5,5,5,0.8)', backdropFilter: 'blur(20px)',
+        background: 'rgba(8,10,16,0.82)', backdropFilter: 'blur(18px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <img src={brandLogoUrl} alt="Arcus" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={brandLogoUrl} alt="Arcus" style={{ width: 34, height: 34, objectFit: 'contain', display: 'block' }} />
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>Arcus</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 2vw, 24px)' }}>
@@ -108,7 +115,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         <h1 style={{
           fontSize: 'clamp(36px, 7vw, 72px)', fontWeight: 700,
           letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 24,
-          background: 'linear-gradient(135deg, #fff 0%, #A1A1AA 100%)',
+          background: 'linear-gradient(180deg, #fff 0%, #d8e2ff 100%)',
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
         }}>
           One workspace for<br />every AI model
@@ -295,7 +302,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
             Ready to start?
           </h2>
           <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)', marginBottom: 32, lineHeight: 1.6 }}>
-            No accounts. No API keys. No costs.<br />Just open and create.
+            Create your Arcus account, verify once, and keep your workspace in sync.<br />Use Puter models, OpenRouter models, or both.
           </p>
           <button onClick={onEnter} style={{
             padding: '16px 48px', background: '#3B82F6', border: 'none', borderRadius: 28,

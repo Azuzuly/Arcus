@@ -1,9 +1,5 @@
 'use client';
 
-import { useStore } from '@/lib/store';
-import { generateUUID } from '@/lib/utils';
-import { AgentNode } from '@/lib/types';
-
 const NODE_CATEGORIES = [
   { id: 'Triggers', color: '#22C55E', nodes: ['Manual Start', 'Schedule', 'Webhook', 'File Watch'] },
   { id: 'AI / LLM', color: '#8B5CF6', nodes: ['Chat Model', 'Text Prompt', 'Image Gen', 'Transcribe', 'Embeddings', 'Agent Loop'] },
@@ -14,8 +10,6 @@ const NODE_CATEGORIES = [
 ];
 
 export default function AgentNodeLibrary() {
-  const { state, dispatch } = useStore();
-
   const onDragStart = (e: React.DragEvent, nodeType: string, categoryColor: string, nodeName: string) => {
     e.dataTransfer.setData('nodeType', nodeType);
     e.dataTransfer.setData('categoryColor', categoryColor);

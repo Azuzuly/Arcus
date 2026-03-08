@@ -1,9 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useStore, DEFAULT_CHAT_SETTINGS } from '@/lib/store';
 import { useMemo, useState } from 'react';
 import { getAvatarInitials, getAvatarColor } from '@/lib/utils';
-import { buildUniqueUsername, normalizeUsernameBase } from '@/lib/auth';
+import { normalizeUsernameBase } from '@/lib/auth';
 import { insforge } from '@/lib/insforge';
 import type { SettingsSection } from '@/lib/types';
 
@@ -177,11 +178,9 @@ export default function SettingsModal() {
                     style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
                   <button onClick={saveUsername} style={{ padding: '8px 14px', background: '#3B82F6', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
                 </div>
-                {state.user.id && (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>
-                    Your public Arcus username will be <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 6 }}>{buildUniqueUsername(username || 'arcus', state.user.id)}</code>
-                  </div>
-                )}
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>
+                  Arcus keeps your username clean and consistent across devices.
+                </div>
               </div>
 
               {/* Danger zone */}

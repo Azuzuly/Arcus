@@ -6,18 +6,18 @@ import AppShell from '@/components/AppShell';
 import LandingPage from '@/components/LandingPage';
 
 export default function Home() {
-  const [entered, setEntered] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return localStorage.getItem('arcus_seen_landing') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [checked, setChecked] = useState(typeof window !== 'undefined');
+  const [entered, setEntered] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setChecked(true));
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        setEntered(localStorage.getItem('arcus_seen_landing') === 'true');
+      } catch {
+        setEntered(false);
+      }
+      setChecked(true);
+    });
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
