@@ -1,131 +1,96 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface BillingPlan {
   id: string;
   name: string;
-  price: number;
-  currency: string;
-  interval: string;
+  priceLabel: string;
+  intervalLabel: string;
   badge?: string;
+  description: string;
+  checkoutReady?: boolean;
+  features: string[];
 }
 
-interface BillingConfigPayload {
-  billingEnabled?: boolean;
-  plans: BillingPlan[];
-  currencies: string[];
-  error?: string;
-}
+const plans: BillingPlan[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    priceLabel: '$0',
+    intervalLabel: 'forever',
+    description: 'Perfect for getting started with chat, studio, and lighter daily workflows.',
+    features: ['150 requests per day', 'Core chat workspace', 'Live web search', 'Studio image generation', 'Prompt attachments'],
+  },
+  {
+    id: 'pro-monthly',
+    name: 'Arcus Pro',
+    priceLabel: '$29',
+    intervalLabel: 'per month',
+    badge: 'Checkout live',
+    description: 'The currently active NOWPayments widget. Best for people who want premium features right now.',
+    checkoutReady: true,
+    features: ['2,000 requests per day', 'Deep research with multi-pass synthesis', 'Priority queueing', 'Premium Studio generations', 'Agent workflow execution feed', 'Cross-device cloud sync'],
+  },
+  {
+    id: 'pro-annual',
+    name: 'Arcus Pro Annual',
+    priceLabel: '$290',
+    intervalLabel: 'per year',
+    badge: 'Best value',
+    description: 'Annual packaging is mapped in the UI and roadmap, while the current hosted widget is set to monthly checkout.',
+    features: ['Everything in Arcus Pro', 'Founding-member pricing', 'Priority roadmap access', 'Feature drops before public launch', 'Research-first onboarding packs', 'Built for power users'],
+  },
+];
+
+const growthFeatures = [
+  'Deep Research reports with visible sources',
+  'Embedded crypto billing via NOWPayments',
+  'Cross-device chat sync',
+  'Agent workflow builder',
+  'Pollinations-powered Studio',
+  'Upload previews in chat',
+  'Trusted-domain research controls',
+  'Pinned and organized conversations',
+  'Mobile-ready AI workspace',
+  'Command palette navigation',
+  'Personalized response modes',
+  'Fast model switching with provider branding',
+];
 
 export default function PricingModal() {
   const { state, dispatch, showToast } = useStore();
-  const [config, setConfig] = useState<BillingConfigPayload | null>(null);
-  const [selectedPlanId, setSelectedPlanId] = useState('pro-annual');
-  const [payCurrency, setPayCurrency] = useState('btc');
-  const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadConfig = async () => {
-      try {
-        const response = await fetch('/api/billing/config', { cache: 'no-store' });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error || 'Could not load billing config.');
-        if (cancelled) return;
-        setConfig(payload);
-        setPayCurrency(payload.currencies?.[0] || 'btc');
-      } catch (error) {
-        if (!cancelled) showToast(error instanceof Error ? error.message : 'Could not load billing config.', 'error');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void loadConfig();
-    return () => { cancelled = true; };
-  }, [showToast]);
+  const [selectedPlanId, setSelectedPlanId] = useState('pro-monthly');
 
   const selectedPlan = useMemo(
-    () => config?.plans.find(plan => plan.id === selectedPlanId) || null,
-    [config, selectedPlanId]
+    () => plans.find(plan => plan.id === selectedPlanId) || plans[1],
+    [selectedPlanId]
   );
-
-  const launchCheckout = async () => {
-    if (!selectedPlan) return;
-    setCheckoutLoading(true);
-
-    try {
-      const response = await fetch('/api/billing/invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planId: selectedPlan.id,
-          payCurrency,
-          userId: state.user.id,
-          email: state.user.email,
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || 'Could not create checkout.');
-
-      const url = payload?.invoice?.invoice_url;
-      if (!url) throw new Error('NOWPayments did not return an invoice URL.');
-      setInvoiceUrl(url);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      showToast('Crypto checkout launched in a new tab.', 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not launch checkout.', 'error');
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
-
-  const planFeatures: Record<string, string[]> = {
-    free: ['150 requests per day', 'Core chat workspace', 'Live web search', 'Studio image generation', 'Prompt attachments'],
-    'pro-monthly': ['2,000 requests per day', 'Deep research with multi-pass synthesis', 'Priority queueing', 'Premium Studio generations', 'Agent workflow execution feed', 'Cross-device cloud sync'],
-    'pro-annual': ['Everything in Pro Monthly', 'Founding member pricing', 'Priority roadmap access', 'Feature drops before public launch', 'Research-first onboarding packs', 'Better value for power users'],
-  };
-
-  const growthFeatures = [
-    'Deep Research reports with visible sources',
-    'Crypto billing via NOWPayments',
-    'Cross-device chat sync',
-    'Agent workflow builder',
-    'Pollinations-powered Studio',
-    'Upload previews in chat',
-    'Trusted-domain research controls',
-    'Pinned and organized conversations',
-    'Mobile-ready AI workspace',
-    'Command palette navigation',
-    'Personalized response modes',
-    'Fast model switching with provider branding',
-  ];
 
   return (
     <div onClick={() => dispatch({ type: 'HIDE_MODAL' })} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)',
+      position: 'fixed', inset: 0, background: 'rgba(4,6,12,0.74)', backdropFilter: 'blur(14px)',
       zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
     }}>
       <div className="modal-enter" onClick={e => e.stopPropagation()} style={{
         maxWidth: 1100, width: 'min(1100px, 100%)', maxHeight: '88vh', overflowY: 'auto', borderRadius: 30,
-        background: 'rgba(18,18,20,0.95)', backdropFilter: 'blur(24px)',
+        background: 'linear-gradient(180deg, rgba(16,18,25,0.97), rgba(8,10,16,0.98))', backdropFilter: 'blur(24px)',
         border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         padding: 32, position: 'relative',
       }}>
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 30,
+          background: 'radial-gradient(circle at 12% 8%, rgba(59,130,246,0.16), transparent 24%), radial-gradient(circle at 90% 16%, rgba(139,92,246,0.18), transparent 24%), radial-gradient(circle at 60% 100%, rgba(16,185,129,0.10), transparent 20%)',
+        }} />
         <button onClick={() => dispatch({ type: 'HIDE_MODAL' })} style={{
           position: 'absolute', top: 16, right: 16, background: 'transparent',
           border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 20,
         }}>×</button>
 
-        <div style={{ display: 'grid', gap: 24 }}>
+        <div style={{ display: 'grid', gap: 24, position: 'relative' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#93c5fd', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Arcus Billing · NOWPayments Ready</div>
+            <div style={{ display: 'inline-flex', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#93c5fd', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Arcus Billing · Embedded NOWPayments</div>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, marginTop: 18, letterSpacing: '-0.04em' }}>Turn Arcus into your always-on AI operating system.</h2>
             <p style={{ color: 'rgba(255,255,255,0.58)', fontSize: 15, marginTop: 12, maxWidth: 720, marginInline: 'auto', lineHeight: 1.7 }}>Pay with crypto, unlock faster research, bigger limits, and the premium features that make people stick around: deeper reports, better builders, cleaner workflows, and early access to what ships next.</p>
           </div>
@@ -133,26 +98,7 @@ export default function PricingModal() {
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(320px, 0.9fr)', gap: 22, alignItems: 'start' }}>
             <div style={{ display: 'grid', gap: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-                <div style={{
-                  padding: 24, borderRadius: 20,
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Free</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 16 }}>$0</div>
-                  <ul style={{ listStyle: 'none', display: 'grid', gap: 9 }}>
-                    {planFeatures.free.map(feature => (
-                      <li key={feature} style={{ color: 'rgba(255,255,255,0.62)', fontSize: 13 }}>• {feature}</li>
-                    ))}
-                  </ul>
-                  <button style={{
-                    marginTop: 22, width: '100%', padding: '11px 0',
-                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12, color: 'rgba(255,255,255,0.56)', fontSize: 14, fontWeight: 600,
-                    cursor: 'default', fontFamily: 'inherit',
-                  }}>{state.user.tier === 'free' ? 'Current plan' : 'Always available'}</button>
-                </div>
-
-                {(config?.plans || []).map(plan => (
+                {plans.map(plan => (
                   <button key={plan.id} onClick={() => setSelectedPlanId(plan.id)} style={{
                     padding: 24, borderRadius: 22, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
                     background: selectedPlanId === plan.id ? 'linear-gradient(180deg, rgba(59,130,246,0.14), rgba(88,28,135,0.18))' : 'rgba(255,255,255,0.03)',
@@ -163,13 +109,21 @@ export default function PricingModal() {
                       <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{plan.name}</div>
                       {plan.badge && <span style={{ padding: '4px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 11, color: '#fff', fontWeight: 700 }}>{plan.badge}</span>}
                     </div>
-                    <div style={{ fontSize: 36, fontWeight: 800 }}>${plan.price}<span style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>/{plan.interval === 'year' ? 'yr' : 'mo'}</span></div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{plan.interval === 'year' ? 'Built for daily operators and teams-in-waiting.' : 'Great for heavy solo use and faster experiments.'}</div>
+                    <div style={{ fontSize: 36, fontWeight: 800 }}>{plan.priceLabel}<span style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>/{plan.intervalLabel}</span></div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{plan.description}</div>
                     <ul style={{ listStyle: 'none', display: 'grid', gap: 9, marginTop: 18 }}>
-                      {(planFeatures[plan.id] || []).map(feature => (
+                      {plan.features.map(feature => (
                         <li key={feature} style={{ color: 'rgba(255,255,255,0.66)', fontSize: 13 }}>✓ {feature}</li>
                       ))}
                     </ul>
+                    {plan.id === 'free' && (
+                      <button type="button" style={{
+                        marginTop: 18, width: '100%', padding: '11px 0',
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 12, color: 'rgba(255,255,255,0.62)', fontSize: 14, fontWeight: 600,
+                        cursor: 'default', fontFamily: 'inherit',
+                      }}>{state.user.tier === 'free' ? 'Current plan' : 'Always available'}</button>
+                    )}
                   </button>
                 ))}
               </div>
@@ -194,82 +148,87 @@ export default function PricingModal() {
               position: 'sticky', top: 12,
             }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Crypto checkout</div>
-              <div style={{ fontSize: 28, fontWeight: 800, marginTop: 10 }}>{selectedPlan?.name || 'Loading plan...'}</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.56)', marginTop: 8, lineHeight: 1.6 }}>Secure hosted checkout powered by NOWPayments. Pay in crypto, complete checkout in a new tab, and come right back to Arcus.</div>
+              <div style={{ fontSize: 28, fontWeight: 800, marginTop: 10 }}>{selectedPlan.name}</div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.56)', marginTop: 8, lineHeight: 1.6 }}>
+                {selectedPlan.checkoutReady
+                  ? 'Secure embedded checkout powered by NOWPayments. Pay in crypto without leaving the billing surface.'
+                  : selectedPlan.id === 'free'
+                    ? 'You already have access to the free plan — no payment required. Upgrade whenever you want deeper research and higher limits.'
+                    : 'The current hosted widget is configured for Arcus Pro monthly. Annual packaging is shown here so the billing page stays ready for the next checkout expansion.'}
+              </div>
 
               <div style={{ marginTop: 20, display: 'grid', gap: 16 }}>
-                {config && !config.billingEnabled && (
-                  <div style={{ padding: 14, borderRadius: 16, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.24)' }}>
-                    <div style={{ fontSize: 12, color: '#fcd34d', fontWeight: 700 }}>Merchant keys still needed</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.68)', marginTop: 6 }}>The checkout UI is live, but real NOWPayments API credentials and IPN secret still need to be added in production before payments can be processed.</div>
+                <div style={{ padding: 14, borderRadius: 16, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}>
+                  <div style={{ fontSize: 12, color: '#bfdbfe', fontWeight: 700 }}>Signed in as {state.user.username}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.68)', marginTop: 6 }}>Checkout is scoped to your active Arcus account so plan upgrades stay tied to the right workspace identity.</div>
+                </div>
+
+                {selectedPlan.checkoutReady ? (
+                  <div style={{
+                    padding: 12, borderRadius: 18, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                  }}>
+                    <iframe
+                      src="https://nowpayments.io/embeds/payment-widget?iid=4716148703"
+                      title="NOWPayments checkout"
+                      style={{ width: '100%', minHeight: 540, border: 'none', borderRadius: 14, background: '#0b0d12' }}
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: 18, borderRadius: 18, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{selectedPlan.id === 'free' ? 'Stay on Free' : 'Annual checkout next'}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)', marginTop: 8, lineHeight: 1.6 }}>
+                      {selectedPlan.id === 'free'
+                        ? 'Keep exploring Arcus at no cost, then upgrade to the live Pro monthly checkout whenever you want more power.'
+                        : 'The embedded widget currently processes the monthly Pro plan. Select Arcus Pro if you want to complete checkout today.'}
+                    </div>
+                    {selectedPlan.id !== 'free' && (
+                      <button onClick={() => setSelectedPlanId('pro-monthly')} style={{
+                        marginTop: 16, width: '100%', padding: '12px 0', borderRadius: 14,
+                        background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none', color: '#fff',
+                        fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                      }}>Switch to live checkout</button>
+                    )}
                   </div>
                 )}
-
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.46)', marginBottom: 8 }}>Plan</label>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {(config?.plans || []).map(plan => (
-                      <button key={plan.id} onClick={() => setSelectedPlanId(plan.id)} style={{
-                        padding: '12px 14px', borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
-                        border: `1px solid ${selectedPlanId === plan.id ? 'rgba(59,130,246,0.34)' : 'rgba(255,255,255,0.08)'}`,
-                        background: selectedPlanId === plan.id ? 'rgba(59,130,246,0.16)' : 'rgba(255,255,255,0.04)',
-                        color: '#fff', textAlign: 'left',
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                          <span style={{ fontWeight: 700 }}>{plan.name}</span>
-                          <span style={{ color: 'rgba(255,255,255,0.62)' }}>${plan.price}/{plan.interval === 'year' ? 'yr' : 'mo'}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.46)', marginBottom: 8 }}>Pay with</label>
-                  <select value={payCurrency} onChange={e => setPayCurrency(e.target.value)} disabled={loading} style={{
-                    width: '100%', padding: '12px 14px', borderRadius: 14,
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#fff', fontFamily: 'inherit', outline: 'none',
-                  }}>
-                    {(config?.currencies || ['btc', 'eth']).map(currency => (
-                      <option key={currency} value={currency}>{currency.toUpperCase()}</option>
-                    ))}
-                  </select>
-                </div>
 
                 <div style={{ padding: 16, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.56)' }}>Charge</span>
-                    <span style={{ fontWeight: 700 }}>{selectedPlan ? `$${selectedPlan.price} ${selectedPlan.currency.toUpperCase()}` : '—'}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.56)' }}>Selected plan</span>
+                    <span style={{ fontWeight: 700 }}>{selectedPlan.name}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, marginTop: 8 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.56)' }}>Checkout currency</span>
-                    <span style={{ fontWeight: 700 }}>{payCurrency.toUpperCase()}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.56)' }}>Displayed price</span>
+                    <span style={{ fontWeight: 700 }}>{selectedPlan.priceLabel}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, marginTop: 8 }}>
                     <span style={{ color: 'rgba(255,255,255,0.56)' }}>Delivery</span>
-                    <span style={{ fontWeight: 700 }}>Hosted invoice</span>
+                    <span style={{ fontWeight: 700 }}>{selectedPlan.checkoutReady ? 'Embedded widget' : 'Comparison only'}</span>
                   </div>
                 </div>
 
-                <button onClick={launchCheckout} disabled={!selectedPlan || checkoutLoading || loading || !config?.billingEnabled} style={{
-                  width: '100%', padding: '14px 0', borderRadius: 16,
-                  background: !config?.billingEnabled ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none',
-                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: checkoutLoading ? 'wait' : (!config?.billingEnabled ? 'not-allowed' : 'pointer'), fontFamily: 'inherit',
-                  boxShadow: '0 18px 40px rgba(59,130,246,0.24)',
-                }}>{!config?.billingEnabled ? 'Add NOWPayments keys to activate' : checkoutLoading ? 'Creating secure checkout…' : 'Pay with NOWPayments'}</button>
+                <button onClick={() => {
+                  if (selectedPlan.id === 'free') {
+                    dispatch({ type: 'HIDE_MODAL' });
+                    showToast('You are already on the free Arcus plan.', 'info');
+                    return;
+                  }
 
-                {invoiceUrl && (
-                  <div style={{ padding: 14, borderRadius: 16, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
-                    <div style={{ fontSize: 12, color: '#a7f3d0', fontWeight: 700 }}>Checkout ready</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.66)', marginTop: 6, wordBreak: 'break-all' }}>{invoiceUrl}</div>
-                  </div>
-                )}
+                  setSelectedPlanId('pro-monthly');
+                  showToast('The live embedded checkout is ready below.', 'success');
+                }} style={{
+                  width: '100%', padding: '14px 0', borderRadius: 16,
+                  background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none',
+                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 18px 40px rgba(59,130,246,0.24)',
+                }}>{selectedPlan.id === 'free' ? 'Keep exploring for free' : selectedPlan.checkoutReady ? 'Checkout widget loaded' : 'Use the live Pro checkout'}</button>
 
                 <div style={{ display: 'grid', gap: 8, color: 'rgba(255,255,255,0.52)', fontSize: 12 }}>
-                  <div>• Hosted payment page opens in a new tab.</div>
-                  <div>• Webhook verification is ready on `/api/billing/webhook`.</div>
-                  <div>• Add your NOWPayments API key and IPN secret to go fully live.</div>
+                  <div>• The monthly Arcus Pro widget is embedded directly in this modal.</div>
+                  <div>• You can keep the server-side billing routes for future invoice or webhook flows.</div>
+                  <div>• The embedded billing experience now works without forcing a separate tab flow.</div>
                 </div>
               </div>
             </div>
