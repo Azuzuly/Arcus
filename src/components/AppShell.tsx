@@ -6,7 +6,6 @@ import TopNav from './TopNav';
 import Sidebar from './Sidebar';
 import ChatView from './ChatView';
 import StudioView from './StudioView';
-import AgentView from './AgentView';
 import OnboardingFlow from './OnboardingFlow';
 import SettingsModal from './SettingsModal';
 import PricingModal from './PricingModal';
@@ -55,7 +54,6 @@ export default function AppShell() {
         <main style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {state.activeTab === 'home' && <ChatView />}
           {state.activeTab === 'studio' && <StudioView />}
-          {state.activeTab === 'agent' && <AgentView />}
         </main>
       </div>
 
