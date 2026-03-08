@@ -71,6 +71,13 @@ export default function OnboardingFlow() {
     }
   };
 
+  const sendVerificationCode = async (targetEmail: string) => {
+    const { error: resendError } = await insforge.auth.resendVerificationEmail({ email: targetEmail.trim() });
+    if (resendError) {
+      throw resendError;
+    }
+  };
+
   const completeAuth = async (
     userLike: Parameters<typeof mapInsforgeUserToStateUser>[0],
     preferredName?: string,
@@ -102,13 +109,23 @@ export default function OnboardingFlow() {
       return;
     }
     if (data?.requireEmailVerification) {
+      try {
+        await sendVerificationCode(email);
+      } catch (verificationError) {
+        setLoading(false);
+        setMode('verify');
+        setError(verificationError instanceof Error ? verificationError.message : 'Account created, but Arcus could not send the verification code automatically.');
+        return;
+      }
       setMode('verify');
-      showToast('Check your email for the 6-digit verification code.', 'info');
+      showToast('Account created. Check your email for the 6-digit verification code.', 'info');
+      setLoading(false);
       return;
     }
     if (data?.user) {
       await completeAuth(data.user, base, 'password');
     }
+    setLoading(false);
   };
 
   const handleSignIn = async () => {
@@ -120,6 +137,17 @@ export default function OnboardingFlow() {
     });
     setLoading(false);
     if (signInError || !data?.user) {
+      if (signInError?.statusCode === 403 && /verify your email/i.test(signInError.nextActions || signInError.message || '')) {
+        setMode('verify');
+        try {
+          await sendVerificationCode(email);
+          showToast('Verify your email to finish signing in. We sent a fresh 6-digit code.', 'info');
+        } catch (verificationError) {
+          setError(verificationError instanceof Error ? verificationError.message : 'Please verify your email before signing in.');
+          return;
+        }
+        return;
+      }
       setError(signInError?.message || 'Could not sign in');
       return;
     }
@@ -138,6 +166,24 @@ export default function OnboardingFlow() {
       return;
     }
     await completeAuth(data.user, username, 'password');
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setError('Enter your email first so Arcus knows where to send the code.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await sendVerificationCode(email);
+      showToast('Fresh verification code sent.', 'success');
+    } catch (verificationError) {
+      setError(verificationError instanceof Error ? verificationError.message : 'Could not resend the verification code.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOAuth = async (provider: 'google' | 'github') => {
@@ -303,6 +349,13 @@ export default function OnboardingFlow() {
                     color: 'var(--text-primary)', fontSize: 16, outline: 'none', fontFamily: 'inherit',
                     textAlign: 'center', letterSpacing: '0.28em',
                   }} />
+                <button onClick={() => void handleResendVerification()} disabled={loading}
+                  style={{
+                    width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                    opacity: loading ? 0.65 : 1,
+                  }}>
+                  {loading ? 'Sending code…' : 'Resend verification code'}
+                </button>
               </div>
             )}
             {mode === 'signup' && usernamePreview && (
