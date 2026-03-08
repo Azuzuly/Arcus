@@ -113,16 +113,31 @@ export default function ChatView() {
       {/* Model selector button */}
       <button onClick={() => setShowModelSelector(!showModelSelector)} style={{
         position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 10,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-        padding: '8px 20px 8px 16px',
-        background: 'rgba(12,12,14,0.6)', backdropFilter: 'blur(40px) saturate(160%)',
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '7px 16px 7px 12px',
+        background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
         border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-pill)',
-        cursor: 'pointer', transition: 'all var(--dur-fast) var(--ease-out)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+        cursor: 'pointer', transition: 'all var(--dur-base) var(--ease-out)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.3)',
         fontFamily: 'inherit',
-      }}>
-        <span style={{ fontWeight: 500, color: '#fff', fontSize: 14 }}>{state.selectedModel.name}</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{state.selectedModel.provider} ▾</span>
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.09)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}
+      >
+        <div style={{
+          width: 20, height: 20, borderRadius: 6,
+          background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, color: '#fff', flexShrink: 0,
+        }}>◆</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+          <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.92)', fontSize: 13, lineHeight: 1.2 }}>{state.selectedModel.name}</span>
+          <span style={{ color: 'rgba(255,255,255,0.38)', fontSize: 10, lineHeight: 1.2 }}>{state.selectedModel.provider}</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.45, marginLeft: 2 }}>
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </button>
 
       {showModelSelector && <ModelSelector onClose={() => setShowModelSelector(false)} />}
@@ -133,10 +148,27 @@ export default function ChatView() {
           position: 'absolute', bottom: 200, left: 0, right: 0,
           textAlign: 'center', zIndex: 1,
           animation: 'msgIn 600ms var(--ease-out) forwards', animationDelay: '200ms',
-          opacity: 0,
+          opacity: 0, padding: '0 24px',
         }}>
-          <h1 style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 600, letterSpacing: '-0.02em', color: '#fff' }}>Hello there!</h1>
-          <p style={{ fontSize: 'clamp(16px, 2vw, 20px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 6 }}>How can I help you today?</p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
+            background: 'rgba(79,142,247,0.08)', border: '1px solid rgba(79,142,247,0.2)',
+            borderRadius: 'var(--radius-pill)', padding: '5px 14px',
+          }}>
+            <span style={{ fontSize: 11, color: 'rgba(79,142,247,0.9)', letterSpacing: '0.04em', fontWeight: 600 }}>ARCUS AI</span>
+          </div>
+          <h1 style={{
+            fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 700,
+            letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.1, marginBottom: 10,
+          }}>
+            Hello, {state.user.username}!
+          </h1>
+          <p style={{
+            fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 400,
+            color: 'rgba(255,255,255,0.45)', lineHeight: 1.5,
+          }}>
+            What can I help you with today?
+          </p>
         </div>
       )}
 
