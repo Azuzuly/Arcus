@@ -1,0 +1,36 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="#05070D"/>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1240" cy="160" r="84" fill="url(#moonGlow)"/>
+  <circle cx="1240" cy="160" r="54" fill="#E7EEF8" fill-opacity="0.95"/>
+  <g fill="#F7FAFF" fill-opacity="0.75">
+    <circle cx="180" cy="120" r="2.2"/>
+    <circle cx="320" cy="220" r="1.8"/>
+    <circle cx="470" cy="150" r="1.5"/>
+    <circle cx="620" cy="90" r="1.9"/>
+    <circle cx="820" cy="180" r="2.1"/>
+    <circle cx="1020" cy="120" r="1.7"/>
+    <circle cx="1380" cy="250" r="1.6"/>
+    <circle cx="1460" cy="110" r="2.4"/>
+    <circle cx="210" cy="310" r="1.5"/>
+    <circle cx="410" cy="280" r="1.6"/>
+    <circle cx="720" cy="320" r="2.1"/>
+    <circle cx="960" cy="260" r="1.4"/>
+    <circle cx="1180" cy="330" r="1.8"/>
+    <circle cx="1320" cy="360" r="1.5"/>
+  </g>
+  <path d="M0 640C155 560 335 540 510 596C666 646 823 660 1010 604C1180 554 1372 568 1600 664V900H0V640Z" fill="#0A1120"/>
+  <path d="M0 710C168 648 372 650 584 716C792 780 1040 780 1228 720C1363 676 1486 680 1600 726V900H0V710Z" fill="#0D172A"/>
+  <path d="M0 774C175 742 344 748 540 790C728 830 949 834 1124 798C1293 762 1456 754 1600 786V900H0V774Z" fill="#132038"/>
+  <defs>
+    <linearGradient id="sky" x1="800" y1="0" x2="800" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09101D"/>
+      <stop offset="0.58" stop-color="#070C16"/>
+      <stop offset="1" stop-color="#030508"/>
+    </linearGradient>
+    <radialGradient id="moonGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1240 160) rotate(90) scale(120)">
+      <stop stop-color="#AFC8FF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#AFC8FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

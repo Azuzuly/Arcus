@@ -32,6 +32,11 @@ export interface ModelInfo {
   id: string;
   name: string;
   description?: string;
+  bestFor?: string[];
+  reasoning?: string;
+  speed?: string;
+  intelligence?: string;
+  knowledge?: string;
   created?: number;
   context_length?: number;
   pricing?: {
@@ -82,6 +87,12 @@ export interface StudioGeneration {
   error?: string;
   dimensions: { width: number; height: number };
   style?: string[];
+}
+
+export interface PromptModes {
+  deepResearch: boolean;
+  webSearch: boolean;
+  personalization: boolean;
 }
 
 export interface AgentNode {

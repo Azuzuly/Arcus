@@ -8,7 +8,7 @@ const FEATURES = [
   { emoji: '🤖', title: 'Agent Builder', desc: 'Design complex AI workflows visually. Drag and drop nodes, connect triggers to actions, chain multiple models together, and automate repetitive tasks.' },
   { emoji: '⚡', title: 'Real-time Streaming', desc: 'Watch AI responses appear word by word in real-time. No waiting for complete responses — start reading and reacting immediately.' },
   { emoji: '🔒', title: 'Zero Configuration', desc: 'No API keys, no accounts, no credit cards. Open the app and start chatting instantly. Your conversations stay in your browser.' },
-  { emoji: '🌙', title: 'Liquid Glass UI', desc: 'A beautiful dark interface with glassmorphism effects, aurora animations, and smooth transitions. Designed for focus and long creative sessions.' },
+  { emoji: '🌙', title: 'Focused Night Workspace', desc: 'A refined dark interface designed for long sessions, quick scanning, and less visual noise.' },
 ];
 
 const MODELS_PREVIEW = [
@@ -50,16 +50,16 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
       height: '100vh', background: '#050505', color: '#fff',
       fontFamily: "'Geist', -apple-system, sans-serif", overflowX: 'hidden', overflowY: 'auto',
     }}>
-      {/* Aurora bg */}
+      {/* Ambient background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', top: '-30%', left: '10%', width: '80%', height: '60%',
-          background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.06) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.08) 0%, rgba(139,92,246,0.03) 42%, transparent 72%)',
           filter: 'blur(80px)', animation: 'aurora 12s ease-in-out infinite',
         }} />
         <div style={{
           position: 'absolute', top: '20%', right: '-10%', width: '50%', height: '50%',
-          background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.05) 0%, rgba(59,130,246,0.02) 40%, transparent 70%)',
           filter: 'blur(100px)', animation: 'aurora 15s ease-in-out infinite reverse',
         }} />
         <div style={{
@@ -107,8 +107,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         <h1 style={{
           fontSize: 'clamp(36px, 7vw, 72px)', fontWeight: 700,
           letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 24,
-          background: 'linear-gradient(135deg, #fff 0%, #A1A1AA 100%)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          color: '#F5F7FB',
         }}>
           One workspace for<br />every AI model
         </h1>
