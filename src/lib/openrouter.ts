@@ -56,7 +56,7 @@ export async function streamChatCompletion(
 
   try {
     const body: Record<string, unknown> = {
-      model: options.model || 'google/gemini-2.5-pro',
+      model: options.model || 'anthropic/claude-opus-4.6',
       messages,
       stream: true,
     };
@@ -137,7 +137,7 @@ export async function chatCompletion(
       'X-Title': 'Arcus',
     },
     body: JSON.stringify({
-      model: options.model || 'google/gemini-2.5-pro',
+      model: options.model || 'anthropic/claude-opus-4.6',
       messages,
     }),
   });
