@@ -11,6 +11,89 @@ function getPuter(): any {
   return null;
 }
 
+function normalizeProviderName(providerKey: string): string {
+  const names: Record<string, string> = {
+    anthropic: 'Anthropic',
+    openai: 'OpenAI',
+    google: 'Google',
+    deepseek: 'DeepSeek',
+    'meta-llama': 'Meta',
+    'x-ai': 'xAI',
+    mistralai: 'Mistral',
+    cohere: 'Cohere',
+    qwen: 'Qwen',
+  };
+
+  return names[providerKey] || providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
+}
+
+function toModelInfo(raw: any): ModelInfo | null {
+  const id = String(raw?.id || raw?.name || raw?.model || '').trim();
+  if (!id) return null;
+
+  const providerKey = String(raw?.provider || raw?.owned_by || raw?.organization || id.split('/')[0] || 'puter').toLowerCase();
+  const name = String(raw?.display_name || raw?.name || id.split('/').pop() || id)
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+
+  return {
+    id,
+    name,
+    description: typeof raw?.description === 'string' ? raw.description : undefined,
+    created: typeof raw?.created === 'number' ? raw.created : 0,
+    context_length: Number(raw?.context_length || raw?.contextWindow || raw?.max_context_tokens || 0) || undefined,
+    pricing: {
+      prompt: raw?.pricing?.prompt?.toString?.() || raw?.input_cost?.toString?.() || raw?.pricing?.input?.toString?.(),
+      completion: raw?.pricing?.completion?.toString?.() || raw?.output_cost?.toString?.() || raw?.pricing?.output?.toString?.(),
+    },
+    top_provider: {
+      max_completion_tokens: Number(raw?.top_provider?.max_completion_tokens || raw?.max_output_tokens || raw?.max_completion_tokens || 0) || undefined,
+    },
+    architecture: {
+      input_modalities: Array.isArray(raw?.architecture?.input_modalities) ? raw.architecture.input_modalities : Array.isArray(raw?.input_modalities) ? raw.input_modalities : ['text'],
+      output_modalities: Array.isArray(raw?.architecture?.output_modalities) ? raw.architecture.output_modalities : Array.isArray(raw?.output_modalities) ? raw.output_modalities : ['text'],
+      modality: raw?.architecture?.modality || raw?.modality,
+    },
+    provider: normalizeProviderName(providerKey),
+  } as ModelInfo;
+}
+
+async function tryGetPuterModelDirectory(p: any): Promise<ModelInfo[] | null> {
+  const candidates = [
+    async () => p?.ai?.models?.list?.(),
+    async () => p?.ai?.listModels?.(),
+    async () => p?.ai?.getModels?.(),
+    async () => p?.models?.list?.(),
+    async () => p?.ai?.models,
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const result = await candidate();
+      const maybeArray = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.models)
+          ? result.models
+          : Array.isArray(result?.data)
+            ? result.data
+            : Array.isArray(result?.items)
+              ? result.items
+              : null;
+
+      if (!maybeArray) continue;
+
+      const normalized = maybeArray.map(toModelInfo).filter((model: ModelInfo | null): model is ModelInfo => Boolean(model));
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    } catch {
+      // try next puter surface
+    }
+  }
+
+  return null;
+}
+
 // ── Model list (fetched from Puter/OpenRouter directory) ──
 const CURATED_MODELS: ModelInfo[] = [
   // Anthropic
@@ -42,7 +125,16 @@ const CURATED_MODELS: ModelInfo[] = [
 ];
 
 export async function fetchModels(): Promise<ModelInfo[]> {
-  return CURATED_MODELS;
+  const p = getPuter();
+  const liveModels = p ? await tryGetPuterModelDirectory(p) : null;
+
+  return [...(liveModels || []), ...CURATED_MODELS]
+    .reduce<ModelInfo[]>((acc, model) => {
+      if (acc.some(existing => existing.id === model.id)) return acc;
+      acc.push(model);
+      return acc;
+    }, [])
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export interface StreamCallbacks {

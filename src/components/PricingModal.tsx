@@ -20,8 +20,8 @@ const plans: BillingPlan[] = [
     name: 'Free',
     priceLabel: '$0',
     intervalLabel: 'forever',
-    description: 'Perfect for getting started with chat, studio, and lighter daily workflows.',
-    features: ['150 requests per day', 'Core chat workspace', 'Live web search', 'Studio image generation', 'Prompt attachments'],
+    description: 'Perfect for getting started with chat, studio, and daily workflows — including cross-device sync.',
+    features: ['150 requests per day', 'Core chat workspace', 'Live web search', 'Studio image generation', 'Prompt attachments', 'Cross-device chat sync'],
   },
   {
     id: 'pro-monthly',
@@ -29,25 +29,16 @@ const plans: BillingPlan[] = [
     priceLabel: '$29',
     intervalLabel: 'per month',
     badge: 'Checkout live',
-    description: 'The currently active NOWPayments widget. Best for people who want premium features right now.',
+    description: 'The currently active NOWPayments widget. Best for people who want deeper research and higher limits right now.',
     checkoutReady: true,
-    features: ['2,000 requests per day', 'Deep research with multi-pass synthesis', 'Priority queueing', 'Premium Studio generations', 'Agent workflow execution feed', 'Cross-device cloud sync'],
-  },
-  {
-    id: 'pro-annual',
-    name: 'Arcus Pro Annual',
-    priceLabel: '$290',
-    intervalLabel: 'per year',
-    badge: 'Best value',
-    description: 'Annual packaging is mapped in the UI and roadmap, while the current hosted widget is set to monthly checkout.',
-    features: ['Everything in Arcus Pro', 'Founding-member pricing', 'Priority roadmap access', 'Feature drops before public launch', 'Research-first onboarding packs', 'Built for power users'],
+    features: ['2,000 requests per day', 'Deep research with multi-pass synthesis', 'Priority queueing', 'Premium Studio generations', 'Agent workflow execution feed'],
   },
 ];
 
 const growthFeatures = [
   'Deep Research reports with visible sources',
   'Embedded crypto billing via NOWPayments',
-  'Cross-device chat sync',
+  'Cross-device chat sync in Free',
   'Agent workflow builder',
   'Pollinations-powered Studio',
   'Upload previews in chat',
@@ -75,14 +66,10 @@ export default function PricingModal() {
     }}>
       <div className="modal-enter" onClick={e => e.stopPropagation()} style={{
         maxWidth: 1100, width: 'min(1100px, 100%)', maxHeight: '88vh', overflowY: 'auto', borderRadius: 30,
-        background: 'linear-gradient(180deg, rgba(16,18,25,0.97), rgba(8,10,16,0.98))', backdropFilter: 'blur(24px)',
+        background: 'rgba(12,15,22,0.98)', backdropFilter: 'blur(20px)',
         border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         padding: 32, position: 'relative',
       }}>
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 30,
-          background: 'radial-gradient(circle at 12% 8%, rgba(59,130,246,0.16), transparent 24%), radial-gradient(circle at 90% 16%, rgba(139,92,246,0.18), transparent 24%), radial-gradient(circle at 60% 100%, rgba(16,185,129,0.10), transparent 20%)',
-        }} />
         <button onClick={() => dispatch({ type: 'HIDE_MODAL' })} style={{
           position: 'absolute', top: 16, right: 16, background: 'transparent',
           border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 20,
@@ -90,7 +77,7 @@ export default function PricingModal() {
 
         <div style={{ display: 'grid', gap: 24, position: 'relative' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#93c5fd', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Arcus Billing · Embedded NOWPayments</div>
+            <div style={{ display: 'inline-flex', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#93c5fd', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Arcus Billing · Monthly only</div>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, marginTop: 18, letterSpacing: '-0.04em' }}>Turn Arcus into your always-on AI operating system.</h2>
             <p style={{ color: 'rgba(255,255,255,0.58)', fontSize: 15, marginTop: 12, maxWidth: 720, marginInline: 'auto', lineHeight: 1.7 }}>Pay with crypto, unlock faster research, bigger limits, and the premium features that make people stick around: deeper reports, better builders, cleaner workflows, and early access to what ships next.</p>
           </div>
@@ -101,7 +88,7 @@ export default function PricingModal() {
                 {plans.map(plan => (
                   <button key={plan.id} onClick={() => setSelectedPlanId(plan.id)} style={{
                     padding: 24, borderRadius: 22, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-                    background: selectedPlanId === plan.id ? 'linear-gradient(180deg, rgba(59,130,246,0.14), rgba(88,28,135,0.18))' : 'rgba(255,255,255,0.03)',
+                    background: selectedPlanId === plan.id ? 'rgba(59,130,246,0.14)' : 'rgba(255,255,255,0.03)',
                     border: `1px solid ${selectedPlanId === plan.id ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.08)'}`,
                     boxShadow: selectedPlanId === plan.id ? '0 18px 50px rgba(59,130,246,0.16)' : 'none',
                   }}>
@@ -143,7 +130,7 @@ export default function PricingModal() {
 
             <div style={{
               padding: 24, borderRadius: 24,
-              background: 'linear-gradient(180deg, rgba(31,41,55,0.84), rgba(17,24,39,0.92))',
+              background: 'rgba(17,24,39,0.92)',
               border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 28px 70px rgba(0,0,0,0.32)',
               position: 'sticky', top: 12,
             }}>
@@ -152,9 +139,7 @@ export default function PricingModal() {
               <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.56)', marginTop: 8, lineHeight: 1.6 }}>
                 {selectedPlan.checkoutReady
                   ? 'Secure embedded checkout powered by NOWPayments. Pay in crypto without leaving the billing surface.'
-                  : selectedPlan.id === 'free'
-                    ? 'You already have access to the free plan — no payment required. Upgrade whenever you want deeper research and higher limits.'
-                    : 'The current hosted widget is configured for Arcus Pro monthly. Annual packaging is shown here so the billing page stays ready for the next checkout expansion.'}
+                  : 'You already have access to the free plan — no payment required. Upgrade whenever you want deeper research and higher limits.'}
               </div>
 
               <div style={{ marginTop: 20, display: 'grid', gap: 16 }}>
@@ -178,19 +163,10 @@ export default function PricingModal() {
                   </div>
                 ) : (
                   <div style={{ padding: 18, borderRadius: 18, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{selectedPlan.id === 'free' ? 'Stay on Free' : 'Annual checkout next'}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Stay on Free</div>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.62)', marginTop: 8, lineHeight: 1.6 }}>
-                      {selectedPlan.id === 'free'
-                        ? 'Keep exploring Arcus at no cost, then upgrade to the live Pro monthly checkout whenever you want more power.'
-                        : 'The embedded widget currently processes the monthly Pro plan. Select Arcus Pro if you want to complete checkout today.'}
+                      Keep exploring Arcus at no cost, then upgrade to the live Pro monthly checkout whenever you want more power.
                     </div>
-                    {selectedPlan.id !== 'free' && (
-                      <button onClick={() => setSelectedPlanId('pro-monthly')} style={{
-                        marginTop: 16, width: '100%', padding: '12px 0', borderRadius: 14,
-                        background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none', color: '#fff',
-                        fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-                      }}>Switch to live checkout</button>
-                    )}
                   </div>
                 )}
 
@@ -227,7 +203,7 @@ export default function PricingModal() {
 
                 <div style={{ display: 'grid', gap: 8, color: 'rgba(255,255,255,0.52)', fontSize: 12 }}>
                   <div>• The monthly Arcus Pro widget is embedded directly in this modal.</div>
-                  <div>• You can keep the server-side billing routes for future invoice or webhook flows.</div>
+                  <div>• Free includes cross-device sync.</div>
                   <div>• The embedded billing experience now works without forcing a separate tab flow.</div>
                 </div>
               </div>

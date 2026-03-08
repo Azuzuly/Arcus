@@ -181,6 +181,7 @@ export default function ChatView() {
 
   const activeConv = state.conversations.find(c => c.id === state.activeChatId);
   const isEmpty = !activeConv || activeConv.messages.length === 0;
+  const emptyHeroPaddingTop = 138;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -361,10 +362,10 @@ export default function ChatView() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
         padding: '8px 18px 8px 15px',
         minWidth: 180,
-        background: 'linear-gradient(180deg, rgba(51,51,55,0.88), rgba(20,20,24,0.9))', backdropFilter: 'blur(40px) saturate(160%)',
+        background: 'rgba(20,24,34,0.78)', backdropFilter: 'blur(26px) saturate(140%)',
         border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-pill)',
         cursor: 'pointer', transition: 'all var(--dur-fast) var(--ease-out)',
-        boxShadow: '0 18px 44px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)',
+        boxShadow: '0 10px 28px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)',
         fontFamily: 'inherit',
       }}>
         <span style={{ fontWeight: 500, color: '#fff', fontSize: 14 }}>{state.selectedModel.name}</span>
@@ -376,27 +377,31 @@ export default function ChatView() {
       {/* Greeting */}
       {isEmpty && (
         <div style={{
-          position: 'absolute', bottom: 220, left: 0, right: 0,
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          paddingTop: emptyHeroPaddingTop, paddingBottom: 210, paddingInline: 20,
           textAlign: 'center', zIndex: 1,
           animation: 'msgIn 600ms var(--ease-out) forwards', animationDelay: '200ms',
           opacity: 0,
         }}>
-          <h1 style={{ fontSize: 'clamp(24px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#fff' }}>Your AI workspace is awake.</h1>
-          <p style={{ fontSize: 'clamp(15px, 2vw, 19px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 8 }}>Chat, research the live web, and create with a calmer charcoal vibe.</p>
+          <div style={{ maxWidth: 860, width: '100%' }}>
+            <h1 style={{ fontSize: 'clamp(24px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#fff' }}>Your AI workspace is awake.</h1>
+            <p style={{ fontSize: 'clamp(15px, 2vw, 19px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 8 }}>Chat, research the live web, and create in Arcus with a crisp night-sky feel.</p>
+          </div>
         </div>
       )}
 
       {isEmpty && (
         <div style={{
-          position: 'absolute', bottom: 158, left: '50%', transform: 'translateX(-50%)', zIndex: 2,
+          position: 'absolute', top: emptyHeroPaddingTop + 106, left: '50%', transform: 'translateX(-50%)', zIndex: 2,
           display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', maxWidth: 'min(860px, calc(100vw - 40px))',
         }}>
           {quickPrompts.map(prompt => (
             <button key={prompt} onClick={() => sendMessage(prompt, { deepResearch: /research|table|compare|memo/i.test(prompt) })} style={{
               padding: '10px 14px', borderRadius: 18,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(18,24,34,0.7)', border: '1px solid rgba(255,255,255,0.08)',
               color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
-              boxShadow: 'var(--shadow-card)',
+              boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
             }}>
               {prompt}
             </button>

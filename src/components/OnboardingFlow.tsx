@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { buildUniqueUsername, mapInsforgeUserToStateUser, normalizeUsernameBase } from '@/lib/auth';
+import { mapInsforgeUserToStateUser, normalizeUsernameBase } from '@/lib/auth';
 import { insforge } from '@/lib/insforge';
 import { brandLogoUrl } from '@/lib/providerLogos';
 
@@ -76,13 +76,12 @@ export default function OnboardingFlow() {
     method: AuthMethod = 'password'
   ) => {
     const normalized = normalizeUsernameBase(preferredName || username || String(userLike.profile?.name || 'arcus'));
-    const uniqueUsername = buildUniqueUsername(normalized, userLike.id);
     await insforge.auth.setProfile({
-      name: uniqueUsername,
-      username: uniqueUsername,
+      name: normalized,
+      username: normalized,
       preferred_name: normalized,
     });
-    dispatch({ type: 'SET_USER', user: mapInsforgeUserToStateUser({ ...userLike, profile: { ...(userLike.profile || {}), username: uniqueUsername, name: uniqueUsername } }) });
+    dispatch({ type: 'SET_USER', user: mapInsforgeUserToStateUser({ ...userLike, profile: { ...(userLike.profile || {}), username: normalized, name: normalized } }) });
     rememberAuthMethod(method);
     showToast('Welcome to Arcus', 'success');
   };
@@ -168,7 +167,7 @@ export default function OnboardingFlow() {
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      background: 'radial-gradient(circle at top left, rgba(59,130,246,0.24), transparent 28%), radial-gradient(circle at 82% 12%, rgba(139,92,246,0.22), transparent 30%), radial-gradient(circle at 50% 100%, rgba(34,197,94,0.12), transparent 24%), rgba(7,10,18,0.94)',
+      background: 'rgba(6,8,14,0.96)',
       backdropFilter: 'blur(36px)', zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 18,
@@ -176,23 +175,19 @@ export default function OnboardingFlow() {
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <div style={{
           position: 'absolute', top: '-18%', left: '-8%', width: '40vw', height: '40vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(59,130,246,0.28), transparent 68%)', filter: 'blur(32px)',
+          background: 'radial-gradient(circle, rgba(64,101,175,0.18), transparent 68%)', filter: 'blur(32px)',
         }} />
         <div style={{
           position: 'absolute', right: '-10%', bottom: '-14%', width: '36vw', height: '36vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(168,85,247,0.22), transparent 70%)', filter: 'blur(36px)',
+          background: 'radial-gradient(circle, rgba(39,69,121,0.18), transparent 70%)', filter: 'blur(36px)',
         }} />
       </div>
       <div className="modal-enter" style={{
         maxWidth: 960, width: 'min(960px, 100%)', borderRadius: 'var(--radius-3xl)',
-        background: 'linear-gradient(180deg, rgba(17,24,39,0.92), rgba(10,14,24,0.94))', backdropFilter: 'blur(24px) saturate(160%)',
+        background: 'rgba(12,16,24,0.94)', backdropFilter: 'blur(20px) saturate(145%)',
         border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'var(--shadow-modal)',
         overflow: 'hidden', position: 'relative',
       }}>
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(135deg, rgba(59,130,246,0.08), transparent 36%, transparent 64%, rgba(168,85,247,0.08))',
-        }} />
         <div style={{
           display: 'grid',
           gridTemplateColumns: isWide ? 'minmax(320px, 0.92fr) minmax(360px, 1fr)' : '1fr',
@@ -202,7 +197,7 @@ export default function OnboardingFlow() {
             padding: isWide ? '42px 34px 38px 40px' : '28px 24px 10px',
             borderRight: isWide ? '1px solid rgba(255,255,255,0.08)' : 'none',
             borderBottom: isWide ? 'none' : '1px solid rgba(255,255,255,0.08)',
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+            background: 'rgba(255,255,255,0.02)',
           }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.22)', color: '#bfdbfe', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               Account-gated access
@@ -251,10 +246,10 @@ export default function OnboardingFlow() {
                   Create an account to unlock chat, research, image generation, and your synced Arcus identity across devices.
                 </p>
                 <button onClick={() => setStep(2)} style={{
-                  width: '100%', padding: '14px 0', background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+                  width: '100%', padding: '14px 0', background: '#3B82F6',
                   border: 'none', borderRadius: 'var(--radius-md)', color: '#fff',
                   fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                  boxShadow: '0 16px 40px rgba(59,130,246,0.28)',
+                  boxShadow: '0 10px 28px rgba(59,130,246,0.24)',
                 }}>
                   Get Started →
                 </button>
@@ -311,7 +306,7 @@ export default function OnboardingFlow() {
             )}
             {mode === 'signup' && usernamePreview && (
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-                Your unique Arcus handle will look like <strong>{usernamePreview || 'arcus'}-xxxxxx</strong>
+                Your Arcus username will be <strong>{usernamePreview || 'arcus'}</strong>
               </div>
             )}
             <div style={{ display: 'grid', gap: 10, marginBottom: 18 }}>

@@ -83,7 +83,7 @@ export default function Sidebar() {
   return (
     <aside style={{
       width: state.ui.sidebarCollapsed ? 0 : 260, flexShrink: 0, height: '100%',
-      background: 'linear-gradient(180deg, rgba(42,42,46,0.94), rgba(21,21,24,0.98))', borderRight: '1px solid var(--glass-border)',
+      background: 'rgba(15,17,24,0.86)', borderRight: '1px solid var(--glass-border)',
       display: 'flex', flexDirection: 'column', padding: state.ui.sidebarCollapsed ? 0 : '16px 12px',
       gap: 8, transition: 'width var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease-out)',
       overflow: 'hidden', opacity: state.ui.sidebarCollapsed ? 0 : 1,

@@ -7,11 +7,6 @@ const PLAN_MAP = {
     amount: 19,
     interval: 'month',
   },
-  'pro-annual': {
-    name: 'Arcus Pro Annual',
-    amount: 180,
-    interval: 'year',
-  },
 } as const;
 
 export async function POST(request: NextRequest) {

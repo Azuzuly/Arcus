@@ -30,6 +30,7 @@ export default function TopNav() {
   const tabs: { label: string; value: TabType }[] = [
     { label: 'Home', value: 'home' },
     { label: 'Studio', value: 'studio' },
+    { label: 'Agent', value: 'agent' },
   ];
 
   return (

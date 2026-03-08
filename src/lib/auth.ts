@@ -21,8 +21,8 @@ export function normalizeUsernameBase(value: string): string {
 }
 
 export function buildUniqueUsername(base: string, userId: string): string {
-  const suffix = userId.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(-6) || 'member';
-  return `${normalizeUsernameBase(base)}-${suffix}`;
+  void userId;
+  return normalizeUsernameBase(base);
 }
 
 export function createGuestUserState() {

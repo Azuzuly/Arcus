@@ -53,15 +53,22 @@
 
 html, body {
   height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(95, 127, 255, 0.14), transparent 24%),
-    radial-gradient(circle at top right, rgba(231, 166, 90, 0.08), transparent 22%),
-    linear-gradient(180deg, #1a1a1d 0%, #18191c 48%, #141416 100%);
+  background: #090b10;
   color: var(--text-primary);
   font-family: 'Geist', -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 11, 18, 0.14) 0%, rgba(8, 11, 18, 0) 26%),
+    radial-gradient(circle at 50% 0%, rgba(132, 164, 255, 0.06), transparent 36%);
 }
 
 /* Scrollbar */

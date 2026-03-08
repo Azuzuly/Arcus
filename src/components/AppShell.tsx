@@ -68,12 +68,8 @@ export default function AppShell() {
   return (
     <div id="app" style={{
       display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', position: 'relative', overflow: 'hidden',
-      background: 'radial-gradient(circle at top left, rgba(59,130,246,0.16), transparent 26%), radial-gradient(circle at 80% 12%, rgba(139,92,246,0.14), transparent 24%), linear-gradient(180deg, #121317 0%, #101116 46%, #0b0c11 100%)',
+      background: '#090b10',
     }}>
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'radial-gradient(circle at 25% 75%, rgba(56,189,248,0.10), transparent 20%), radial-gradient(circle at 78% 82%, rgba(236,72,153,0.08), transparent 22%)',
-      }} />
       <TopNav />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         {state.activeTab === 'home' && !isMobile && <Sidebar />}
@@ -87,7 +83,7 @@ export default function AppShell() {
             </div>
           </>
         )}
-        <main style={{ flex: 1, overflow: 'hidden', position: 'relative', background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))' }}>
+        <main style={{ flex: 1, overflow: 'hidden', position: 'relative', background: 'rgba(8,10,16,0.72)' }}>
           {state.activeTab === 'home' && <ChatView />}
           {state.activeTab === 'studio' && <StudioView />}
           {state.activeTab === 'agent' && <AgentView />}

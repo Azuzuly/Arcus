@@ -16,14 +16,6 @@ export async function GET() {
           interval: 'month',
           badge: 'Popular',
         },
-        {
-          id: 'pro-annual',
-          name: 'Arcus Pro Annual',
-          price: 180,
-          currency: 'usd',
-          interval: 'year',
-          badge: 'Best value',
-        },
       ],
       currencies: currencies.filter(currency => ['btc', 'eth', 'sol', 'usdttrc20', 'usdt', 'trx', 'ltc'].includes(String(currency).toLowerCase())).slice(0, 7),
     });
@@ -32,7 +24,6 @@ export async function GET() {
       billingEnabled: false,
       plans: [
         { id: 'pro-monthly', name: 'Arcus Pro Monthly', price: 19, currency: 'usd', interval: 'month', badge: 'Popular' },
-        { id: 'pro-annual', name: 'Arcus Pro Annual', price: 180, currency: 'usd', interval: 'year', badge: 'Best value' },
       ],
       currencies: ['btc', 'eth', 'sol', 'usdttrc20'],
       error: error instanceof Error ? error.message : 'Could not load billing configuration.',
