@@ -6,7 +6,7 @@ import {
   TabType, ModalType, SettingsSection, ToastType, ModelInfo,
   AgentNode, AgentEdge, ExecutionLogEntry, StudioGeneration,
 } from './types';
-import { getStorage, setStorage, setStorageImmediate, clearAllStorage } from './storage';
+import { getStorage, setStorage, clearAllStorage } from './storage';
 import { generateUUID, getAvatarInitials, getAvatarColor } from './utils';
 
 /* ---------- State shape ---------- */
@@ -27,7 +27,17 @@ export interface AppState {
   usage: UsageData;
   toasts: { id: string; message: string; type: ToastType }[];
   modalData: Record<string, unknown>;
-  settings: { backgroundImage: string; accentColor: string; profileImage: string };
+  settings: {
+    backgroundImage: string;
+    accentColor: string;
+    profileImage: string;
+    bio: string;
+    location: string;
+    occupation: string;
+    responseStyle: 'balanced' | 'concise' | 'detailed' | 'friendly';
+    wallpaperOpacity: number;
+    showAnimations: boolean;
+  };
   initialized: boolean;
 }
 
@@ -37,6 +47,17 @@ const DEFAULT_CHAT_SETTINGS: ChatSettings = {
 };
 
 const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic' };
+const DEFAULT_SETTINGS: AppState['settings'] = {
+  backgroundImage: '/night-sky.svg',
+  accentColor: '#7C8CFF',
+  profileImage: '',
+  bio: '',
+  location: '',
+  occupation: '',
+  responseStyle: 'balanced',
+  wallpaperOpacity: 0.72,
+  showAnimations: true,
+};
 
 function initialState(): AppState {
   return {
@@ -56,7 +77,7 @@ function initialState(): AppState {
     usage: { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} },
     toasts: [],
     modalData: {},
-    settings: { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' },
+    settings: { ...DEFAULT_SETTINGS },
     initialized: false,
   };
 }
@@ -171,7 +192,10 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState());
   const stateRef = useRef(state);
-  stateRef.current = state;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -183,7 +207,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const memory = getStorage<AppState['memory']>('memory', { enabled: true, items: [] });
     const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
     const favorites = getStorage<string[]>('favorites', []);
-    const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
+      const savedSettings = getStorage<AppState['settings']>('settings', DEFAULT_SETTINGS);
 
     dispatch({
       type: 'INIT',
@@ -201,7 +225,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         memory,
         usage,
         favoriteModelIds: favorites,
-        settings: savedSettings,
+        settings: { ...DEFAULT_SETTINGS, ...savedSettings },
       },
     });
   }, []);
@@ -255,4 +279,4 @@ export function useStore(): StoreContextValue {
   return ctx;
 }
 
-export { DEFAULT_CHAT_SETTINGS };
+export { DEFAULT_CHAT_SETTINGS, DEFAULT_SETTINGS };
