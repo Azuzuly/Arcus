@@ -24,6 +24,10 @@ export interface NowPaymentsInvoiceResponse {
   order_id?: string;
 }
 
+export function hasNowPaymentsConfig(): boolean {
+  return Boolean(process.env.NOWPAYMENTS_API_KEY);
+}
+
 function getApiKey(): string {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
   if (!apiKey) {

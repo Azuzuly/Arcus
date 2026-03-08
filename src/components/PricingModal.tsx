@@ -13,8 +13,10 @@ interface BillingPlan {
 }
 
 interface BillingConfigPayload {
+  billingEnabled?: boolean;
   plans: BillingPlan[];
   currencies: string[];
+  error?: string;
 }
 
 export default function PricingModal() {
@@ -196,6 +198,13 @@ export default function PricingModal() {
               <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.56)', marginTop: 8, lineHeight: 1.6 }}>Secure hosted checkout powered by NOWPayments. Pay in crypto, complete checkout in a new tab, and come right back to Arcus.</div>
 
               <div style={{ marginTop: 20, display: 'grid', gap: 16 }}>
+                {config && !config.billingEnabled && (
+                  <div style={{ padding: 14, borderRadius: 16, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.24)' }}>
+                    <div style={{ fontSize: 12, color: '#fcd34d', fontWeight: 700 }}>Merchant keys still needed</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.68)', marginTop: 6 }}>The checkout UI is live, but real NOWPayments API credentials and IPN secret still need to be added in production before payments can be processed.</div>
+                  </div>
+                )}
+
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.46)', marginBottom: 8 }}>Plan</label>
                   <div style={{ display: 'grid', gap: 8 }}>
@@ -243,12 +252,12 @@ export default function PricingModal() {
                   </div>
                 </div>
 
-                <button onClick={launchCheckout} disabled={!selectedPlan || checkoutLoading || loading} style={{
+                <button onClick={launchCheckout} disabled={!selectedPlan || checkoutLoading || loading || !config?.billingEnabled} style={{
                   width: '100%', padding: '14px 0', borderRadius: 16,
-                  background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none',
-                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: checkoutLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+                  background: !config?.billingEnabled ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #3B82F6, #8B5CF6)', border: 'none',
+                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: checkoutLoading ? 'wait' : (!config?.billingEnabled ? 'not-allowed' : 'pointer'), fontFamily: 'inherit',
                   boxShadow: '0 18px 40px rgba(59,130,246,0.24)',
-                }}>{checkoutLoading ? 'Creating secure checkout…' : 'Pay with NOWPayments'}</button>
+                }}>{!config?.billingEnabled ? 'Add NOWPayments keys to activate' : checkoutLoading ? 'Creating secure checkout…' : 'Pay with NOWPayments'}</button>
 
                 {invoiceUrl && (
                   <div style={{ padding: 14, borderRadius: 16, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
