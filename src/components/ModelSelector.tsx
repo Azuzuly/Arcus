@@ -82,8 +82,8 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
 
   return (
     <div ref={panelRef} className="panel-enter" style={{
-      position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 50,
-      width: 560, maxHeight: 420, borderRadius: 20,
+      position: 'absolute', top: 70, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
+      width: 'min(560px, 90vw)', maxHeight: 'min(420px, 60vh)', borderRadius: 20,
       background: 'rgba(12,12,14,0.85)', backdropFilter: 'blur(40px) saturate(160%)',
       border: '1px solid rgba(255,255,255,0.1)',
       boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',

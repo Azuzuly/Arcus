@@ -114,6 +114,10 @@ html, body {
   50% { transform: translate(-3%, 6%) scale(0.95); opacity: 1; }
   75% { transform: translate(4%, 3%) scale(1.02); opacity: 0.85; }
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 @keyframes dash-move {
   to { stroke-dashoffset: -24; }
 }

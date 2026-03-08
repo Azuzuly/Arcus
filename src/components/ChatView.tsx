@@ -130,13 +130,13 @@ export default function ChatView() {
       {/* Greeting */}
       {isEmpty && (
         <div style={{
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -60%)',
+          position: 'absolute', bottom: 200, left: 0, right: 0,
           textAlign: 'center', zIndex: 1,
           animation: 'msgIn 600ms var(--ease-out) forwards', animationDelay: '200ms',
           opacity: 0,
         }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff' }}>Hello there!</h1>
-          <p style={{ fontSize: 20, fontWeight: 400, color: 'var(--text-secondary)', marginTop: 6 }}>How can I help you today?</p>
+          <h1 style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 600, letterSpacing: '-0.02em', color: '#fff' }}>Hello there!</h1>
+          <p style={{ fontSize: 'clamp(16px, 2vw, 20px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 6 }}>How can I help you today?</p>
         </div>
       )}
 
