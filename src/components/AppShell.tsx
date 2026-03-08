@@ -45,7 +45,7 @@ export default function AppShell() {
 
   if (!state.initialized) return <div style={{ background: '#050505', height: '100vh' }} />;
 
-  if (!state.user.apiKey) return <OnboardingFlow />;
+  if (!state.user.username) return <OnboardingFlow />;
 
   return (
     <div id="app" style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>

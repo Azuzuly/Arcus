@@ -100,6 +100,10 @@ html, body {
   from { width: 100%; }
   to { width: 0; }
 }
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
 @keyframes shimmer {
   0% { background-position: -200px 0; }
   100% { background-position: 200px 0; }
