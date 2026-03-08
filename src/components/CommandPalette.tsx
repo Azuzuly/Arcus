@@ -25,11 +25,15 @@ export default function CommandPalette() {
   const actions = useMemo(() => [
     { label: 'New Chat', section: 'Actions', action: () => { createNewChat(); dispatch({ type: 'SET_TAB', tab: 'home' }); } },
     { label: 'Open Settings', section: 'Actions', action: () => dispatch({ type: 'SHOW_MODAL', modal: 'settings' }) },
+    { label: 'Open Billing', section: 'Actions', action: () => dispatch({ type: 'SHOW_MODAL', modal: 'pricing' }) },
     { label: 'Switch to Home', section: 'Actions', action: () => dispatch({ type: 'SET_TAB', tab: 'home' }) },
     { label: 'Switch to Studio', section: 'Actions', action: () => dispatch({ type: 'SET_TAB', tab: 'studio' }) },
     { label: 'Switch to Agent', section: 'Actions', action: () => dispatch({ type: 'SET_TAB', tab: 'agent' }) },
+    { label: state.preferences.webSearchEnabled ? 'Disable Web Search' : 'Enable Web Search', section: 'Preferences', action: () => dispatch({ type: 'SET_PREFERENCES', preferences: { webSearchEnabled: !state.preferences.webSearchEnabled } }) },
+    { label: state.preferences.autoWebSearch ? 'Set Search to Manual' : 'Set Search to Auto', section: 'Preferences', action: () => dispatch({ type: 'SET_PREFERENCES', preferences: { autoWebSearch: !state.preferences.autoWebSearch } }) },
+    { label: 'Open Personalization', section: 'Preferences', action: () => dispatch({ type: 'SHOW_MODAL', modal: 'personalization' }) },
     ...state.conversations.map(c => ({ label: c.title, section: 'Conversations', action: () => { dispatch({ type: 'SET_ACTIVE_CHAT', id: c.id }); dispatch({ type: 'SET_TAB', tab: 'home' }); } })),
-  ], [state.conversations, dispatch, createNewChat]);
+  ], [state.conversations, state.preferences.autoWebSearch, state.preferences.webSearchEnabled, dispatch, createNewChat]);
 
   const filtered = useMemo(() => {
     if (!query) return actions;

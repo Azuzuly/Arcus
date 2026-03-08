@@ -1,24 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --bg-void: #050505;
-  --bg-base: #0A0A0A;
-  --bg-surface: #111111;
-  --bg-elevated: #161616;
-  --glass-panel: rgba(124, 124, 124, 0.30);
-  --glass-card: rgba(71, 64, 64, 0.20);
-  --glass-input: #272020;
-  --glass-input-alt: #2B3032;
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-hover: rgba(50, 50, 50, 0.70);
-  --glass-sidebar: rgba(217, 217, 217, 0.10);
-  --glass-button: rgba(217, 217, 217, 0.20);
-  --glass-pill: rgba(132, 132, 132, 0.46);
-  --glass-white: rgba(255, 255, 255, 0.20);
+  --bg-void: #161616;
+  --bg-base: #1b1c1f;
+  --bg-surface: #232428;
+  --bg-elevated: #2b2d31;
+  --glass-panel: rgba(55, 57, 62, 0.62);
+  --glass-card: rgba(255, 255, 255, 0.045);
+  --glass-input: #2d2e33;
+  --glass-input-alt: #32343a;
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  --glass-hover: rgba(255, 255, 255, 0.07);
+  --glass-sidebar: rgba(255, 255, 255, 0.06);
+  --glass-button: rgba(255, 255, 255, 0.08);
+  --glass-pill: rgba(255, 255, 255, 0.07);
+  --glass-white: rgba(255, 255, 255, 0.16);
   --accent-blue: #3B82F6;
   --accent-blue-glow: rgba(59, 130, 246, 0.35);
   --accent-violet: #8B5CF6;
+  --accent-amber: #E7A65A;
+  --accent-mint: #6FB178;
   --accent-lime: #C1FF72;
   --accent-lime-soft: #CEF7AE;
   --accent-red: #EF4444;
@@ -28,7 +30,7 @@
   --text-secondary: #A1A1AA;
   --text-muted: #52525B;
   --text-placeholder: #3F3F46;
-  --shadow-panel: 0px 0px 12.5px 13px rgba(0, 0, 0, 0.25);
+  --shadow-panel: 0px 20px 60px rgba(0, 0, 0, 0.24);
   --shadow-modal: 0px 24px 80px rgba(0, 0, 0, 0.60);
   --shadow-card: 0px 4px 24px rgba(0, 0, 0, 0.40);
   --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.25);
@@ -51,7 +53,10 @@
 
 html, body {
   height: 100%;
-  background: var(--bg-void);
+  background:
+    radial-gradient(circle at top left, rgba(95, 127, 255, 0.14), transparent 24%),
+    radial-gradient(circle at top right, rgba(231, 166, 90, 0.08), transparent 22%),
+    linear-gradient(180deg, #1a1a1d 0%, #18191c 48%, #141416 100%);
   color: var(--text-primary);
   font-family: 'Geist', -apple-system, sans-serif;
   font-size: 14px;
@@ -121,6 +126,14 @@ html, body {
 @keyframes dash-move {
   to { stroke-dashoffset: -24; }
 }
+@keyframes reasoningStep {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
 
 .panel-enter { animation: panelIn var(--dur-base) var(--ease-out) forwards; }
 .modal-enter { animation: modalIn var(--dur-base) var(--ease-out) forwards; }
@@ -133,6 +146,11 @@ html, body {
   -webkit-backdrop-filter: blur(22px) saturate(160%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-panel);
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.28);
+  color: #fff;
 }
 
 /* Code blocks */

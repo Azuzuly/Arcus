@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore, DEFAULT_CHAT_SETTINGS } from '@/lib/store';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ChatSettings as ChatSettingsType } from '@/lib/types';
 import { debounce } from '@/lib/utils';
 
@@ -16,12 +16,8 @@ const PARAM_SLIDERS: { key: keyof ChatSettingsType; label: string; desc: string;
 
 export default function ChatSettingsPanel({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
-  const [settings, setSettings] = useState<ChatSettingsType>(state.chatSettings);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setSettings(state.chatSettings);
-  }, [state.chatSettings]);
+  const settings = state.chatSettings;
 
   const debouncedSave = debounce((key: keyof ChatSettingsType, value: number | string) => {
     dispatch({ type: 'SET_CHAT_SETTINGS', settings: { [key]: value } });
@@ -29,17 +25,10 @@ export default function ChatSettingsPanel({ onClose }: { onClose: () => void }) 
 
   const handleInputChange = (key: keyof ChatSettingsType, value: string | number) => {
     const numValue = parseFloat(value as string);
-    setSettings(prev => ({ ...prev, [key]: isNaN(numValue) ? value : numValue }));
-    debouncedSave(key, value);
-  };
-
-  const handleSliderChange = (key: keyof ChatSettingsType, value: number) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    debouncedSave(key, value);
+    debouncedSave(key, isNaN(numValue) ? value : numValue);
   };
 
   const handleSystemPromptChange = (value: string) => {
-    setSettings(prev => ({ ...prev, systemPrompt: value }));
     debouncedSave('systemPrompt', value);
   };
 
@@ -66,7 +55,6 @@ export default function ChatSettingsPanel({ onClose }: { onClose: () => void }) 
           <h3 style={{ fontSize: 16, fontWeight: 600 }}>Chat Settings</h3>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => {
-              setSettings({ ...DEFAULT_CHAT_SETTINGS });
               dispatch({ type: 'SET_CHAT_SETTINGS', settings: { ...DEFAULT_CHAT_SETTINGS } });
             }} style={{
               padding: '6px 12px', background: 'var(--glass-button)', border: '1px solid var(--glass-border)',
@@ -114,7 +102,7 @@ export default function ChatSettingsPanel({ onClose }: { onClose: () => void }) 
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{param.desc}</div>
               <input type="range"
                 value={settings[param.key]}
-                onChange={e => handleSliderChange(param.key, parseFloat(e.target.value))}
+                onChange={e => handleInputChange(param.key, parseFloat(e.target.value))}
                 min={param.min} max={param.max} step={param.step} 
                 style={{ accentColor: 'var(--accent-blue)', width: '100%' }} />
             </div>

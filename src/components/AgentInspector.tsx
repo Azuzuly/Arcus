@@ -1,10 +1,17 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { useState, useEffect } from 'react';
-import { AgentNode, AgentEdge } from '@/lib/types';
+import { AgentNode } from '@/lib/types';
 
-const NODE_CONFIG_COMPONENTS: Record<string, React.FC<any>> = {
+interface NodeConfigProps {
+  node: AgentNode;
+  onChange: (updates: Partial<AgentNode>) => void;
+  onTest: () => void;
+}
+
+const MissingConfig = ({ nodeType }: { nodeType: string }) => <div className="text-red-500">Config for &apos;{nodeType}&apos; not found.</div>;
+
+const NODE_CONFIG_COMPONENTS: Record<string, React.FC<NodeConfigProps>> = {
   // Placeholder for actual node config components
   'Chat Model': ({ node, onChange, onTest }) => (
     <div>
@@ -32,30 +39,22 @@ const NODE_CONFIG_COMPONENTS: Record<string, React.FC<any>> = {
 export default function AgentInspector() {
   const { state, dispatch } = useStore();
   const selectedNode = state.agent.nodes.find(n => n.id === state.agent.selectedNodeId);
-  const [nodeConfig, setNodeConfig] = useState<AgentNode | null>(null);
-
-  useEffect(() => {
-    if (selectedNode) {
-      setNodeConfig({ ...selectedNode });
-    }
-  }, [selectedNode]);
 
   const handleConfigChange = (updates: Partial<AgentNode>) => {
-    setNodeConfig(prev => prev ? { ...prev, ...updates } : null);
+    if (!selectedNode) return;
+    dispatch({ type: 'UPDATE_AGENT_NODE', id: selectedNode.id, updates });
   };
 
   const handleSave = () => {
-    if (nodeConfig) {
-      dispatch({ type: 'UPDATE_AGENT_NODE', id: nodeConfig.id, updates: nodeConfig });
-    }
+    // Changes are applied immediately for now.
   };
 
   const handleTestNode = () => {
-    console.log('Testing node...', nodeConfig);
+    console.log('Testing node...', selectedNode);
     // Implement actual node testing logic here
   };
 
-  if (!selectedNode || !nodeConfig) {
+  if (!selectedNode) {
     return (
       <div style={{
         width: 320, flexShrink: 0, marginTop: 0, overflowY: 'auto',
@@ -68,7 +67,7 @@ export default function AgentInspector() {
     );
   }
 
-  const ConfigComponent = NODE_CONFIG_COMPONENTS[selectedNode.type] || (() => <div className="text-red-500">Config for '{selectedNode.type}' not found.</div>);
+  const ConfigComponent = NODE_CONFIG_COMPONENTS[selectedNode.type];
 
   return (
     <div style={{
@@ -82,7 +81,7 @@ export default function AgentInspector() {
           ×</button>
       </div>
 
-      <ConfigComponent node={nodeConfig} onChange={handleConfigChange} onTest={handleTestNode} />
+      {ConfigComponent ? <ConfigComponent node={selectedNode} onChange={handleConfigChange} onTest={handleTestNode} /> : <MissingConfig nodeType={selectedNode.type} />}
 
       <div className="mt-auto pt-4 border-t border-gray-700">
         <button onClick={handleSave} style={{

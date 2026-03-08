@@ -5,6 +5,43 @@ export interface Message {
   timestamp: number;
   model?: { id: string; name: string; provider: string } | null;
   isStreaming?: boolean;
+  reasoning?: ReasoningStep[];
+  attachments?: ChatAttachment[];
+  research?: ResearchPacket;
+}
+
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  kind: 'image' | 'file';
+  previewUrl?: string;
+}
+
+export interface ResearchSource {
+  title: string;
+  url: string;
+  content: string;
+  provider: string;
+  score?: number;
+  favicon?: string;
+  query: string;
+}
+
+export interface ResearchPacket {
+  mode: 'standard' | 'deep';
+  queries: string[];
+  sources: ResearchSource[];
+  brief?: string;
+  trustedDomains?: string[];
+}
+
+export interface ReasoningStep {
+  id: string;
+  label: string;
+  detail?: string;
+  status: 'pending' | 'running' | 'complete' | 'error';
 }
 
 export interface ChatSettings {
@@ -123,7 +160,15 @@ export interface ExecutionLogEntry {
   error?: string;
 }
 
+export interface PersonalizationSettings {
+  webSearchEnabled: boolean;
+  autoWebSearch: boolean;
+  responseStyle: 'balanced' | 'concise' | 'detailed';
+  researchDepth: 'standard' | 'deep' | 'exhaustive';
+  trustedDomains: string[];
+}
+
 export type TabType = 'home' | 'studio' | 'agent';
-export type ModalType = 'settings' | 'pricing' | 'rename' | 'delete' | 'model-selector' | null;
+export type ModalType = 'settings' | 'pricing' | 'rename' | 'delete' | 'model-selector' | 'personalization' | null;
 export type SettingsSection = 'account' | 'appearance' | 'system-prompt' | 'memory' | 'usage' | 'about';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';

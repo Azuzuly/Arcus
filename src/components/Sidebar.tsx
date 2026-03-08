@@ -2,22 +2,95 @@
 
 import { useStore } from '@/lib/store';
 import { relativeTime, truncate } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 export default function Sidebar() {
-  const { state, dispatch, createNewChat } = useStore();
+  const { state, dispatch, createNewChat, showToast } = useStore();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const syncViewport = () => setIsMobile(window.innerWidth <= 960);
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+    return () => window.removeEventListener('resize', syncViewport);
+  }, []);
 
   const sortedConvos = [...state.conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+  const pinnedConvos = sortedConvos.filter(conv => conv.pinned);
+  const regularConvos = sortedConvos.filter(conv => !conv.pinned);
+
+  const togglePin = (chatId: string, isPinned: boolean) => {
+    if (!isPinned && pinnedConvos.length >= 5) {
+      showToast('You can pin up to 5 chats for now.', 'warning');
+      return;
+    }
+    dispatch({ type: 'TOGGLE_PIN_CONVERSATION', id: chatId });
+  };
+
+  const renderConversation = (conv: typeof sortedConvos[number]) => (
+    <div key={conv.id} onClick={() => { dispatch({ type: 'SET_ACTIVE_CHAT', id: conv.id }); if (isMobile) dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } }); }}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        padding: '10px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+        position: 'relative', transition: 'all var(--dur-fast) var(--ease-out)',
+        background: state.activeChatId === conv.id ? 'rgba(116,126,255,0.13)' : conv.pinned ? 'rgba(255,255,255,0.04)' : 'transparent',
+        border: `1px solid ${state.activeChatId === conv.id ? 'rgba(116,126,255,0.18)' : conv.pinned ? 'rgba(255,255,255,0.08)' : 'transparent'}`,
+        boxShadow: conv.pinned ? 'inset 0 1px 0 rgba(255,255,255,0.04)' : 'none',
+      }}
+      onMouseEnter={e => { if (state.activeChatId !== conv.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+      onMouseLeave={e => { if (state.activeChatId !== conv.id) e.currentTarget.style.background = conv.pinned ? 'rgba(255,255,255,0.04)' : 'transparent'; }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {conv.pinned && (
+            <span style={{
+              padding: '3px 7px',
+              background: 'rgba(111,177,120,0.12)',
+              border: '1px solid rgba(111,177,120,0.18)',
+              borderRadius: 'var(--radius-pill)',
+              color: 'var(--accent-mint)',
+              fontSize: 10,
+              fontWeight: 700,
+            }}>
+              PINNED
+            </span>
+          )}
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {truncate(conv.title, 28)}
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{relativeTime(conv.updatedAt)}</div>
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button onClick={e => { e.stopPropagation(); togglePin(conv.id, conv.pinned); }}
+          title={conv.pinned ? 'Unpin chat' : 'Pin chat'}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: conv.pinned ? 'var(--accent-mint)' : 'var(--text-secondary)', fontSize: 13, padding: 4, opacity: 0.82 }}>
+          📌
+        </button>
+        <button onClick={e => { e.stopPropagation(); dispatch({ type: 'SHOW_MODAL', modal: 'rename', data: { chatId: conv.id, currentTitle: conv.title } }); }}
+          title="Rename chat"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, padding: 4, opacity: 0.82 }}>
+          ✏️
+        </button>
+        <button onClick={e => { e.stopPropagation(); dispatch({ type: 'SHOW_MODAL', modal: 'delete', data: { chatId: conv.id, chatTitle: conv.title } }); }}
+          title="Delete chat"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, padding: 4, opacity: 0.82 }}>
+          🗑️
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <aside style={{
       width: state.ui.sidebarCollapsed ? 0 : 260, flexShrink: 0, height: '100%',
-      background: 'rgba(25,25,25,0.95)', borderRight: '1px solid var(--glass-border)',
+      background: 'linear-gradient(180deg, rgba(42,42,46,0.94), rgba(21,21,24,0.98))', borderRight: '1px solid var(--glass-border)',
       display: 'flex', flexDirection: 'column', padding: state.ui.sidebarCollapsed ? 0 : '16px 12px',
       gap: 8, transition: 'width var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease-out)',
       overflow: 'hidden', opacity: state.ui.sidebarCollapsed ? 0 : 1,
+      boxShadow: isMobile && !state.ui.sidebarCollapsed ? '0 18px 80px rgba(0,0,0,0.42)' : 'none',
     }}>
       {/* New Chat Button */}
-      <button onClick={() => createNewChat()} style={{
+      <button onClick={() => { createNewChat(); if (isMobile) dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } }); }} style={{
         width: '100%', display: 'flex', alignItems: 'center', gap: 8,
         padding: '10px 14px', background: 'var(--glass-button)',
         border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)',
@@ -45,35 +118,19 @@ export default function Sidebar() {
             No conversations yet
           </div>
         )}
-        {sortedConvos.map(conv => (
-          <div key={conv.id} onClick={() => dispatch({ type: 'SET_ACTIVE_CHAT', id: conv.id })}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '9px 12px', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
-              position: 'relative', transition: 'background var(--dur-fast) var(--ease-out)',
-              background: state.activeChatId === conv.id ? 'var(--glass-hover)' : 'transparent',
-              borderLeft: state.activeChatId === conv.id ? '2px solid var(--accent-blue)' : '2px solid transparent',
-            }}
-            onMouseEnter={e => { if (state.activeChatId !== conv.id) e.currentTarget.style.background = 'var(--glass-hover)'; }}
-            onMouseLeave={e => { if (state.activeChatId !== conv.id) e.currentTarget.style.background = 'transparent'; }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {truncate(conv.title, 28)}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{relativeTime(conv.updatedAt)}</div>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button onClick={e => { e.stopPropagation(); dispatch({ type: 'SHOW_MODAL', modal: 'rename', data: { chatId: conv.id, currentTitle: conv.title } }); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, padding: 2, opacity: 0.5 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}>✎</button>
-              <button onClick={e => { e.stopPropagation(); dispatch({ type: 'SHOW_MODAL', modal: 'delete', data: { chatId: conv.id, chatTitle: conv.title } }); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, padding: 2, opacity: 0.5 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}>⋯</button>
-            </div>
-          </div>
-        ))}
+        {pinnedConvos.length > 0 && (
+          <>
+            <div style={{ padding: '8px 6px 4px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>PINNED</div>
+            {pinnedConvos.map(renderConversation)}
+            <div style={{ height: 10 }} />
+          </>
+        )}
+        {regularConvos.length > 0 && (
+          <>
+            <div style={{ padding: '8px 6px 4px', color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>RECENT</div>
+            {regularConvos.map(renderConversation)}
+          </>
+        )}
       </div>
 
       {/* Footer: Usage */}

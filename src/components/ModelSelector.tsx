@@ -4,6 +4,7 @@ import { useStore } from '@/lib/store';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { ModelInfo } from '@/lib/types';
 import { formatTokenCost, formatNumber } from '@/lib/utils';
+import { getProviderLogo } from '@/lib/providerLogos';
 
 const PROVIDER_LOGOS: Record<string, string> = {
   anthropic: '🟠', openai: '🟢', google: '🔵', deepseek: '🟣',
@@ -43,6 +44,7 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
   const [search, setSearch] = useState('');
   const [hovered, setHovered] = useState<ModelInfo | null>(null);
+  const [viewportWidth, setViewportWidth] = useState<number>(typeof window === 'undefined' ? 1200 : window.innerWidth);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +54,12 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
     setTimeout(() => document.addEventListener('mousedown', handler), 0);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const filtered = useMemo(() => {
     if (!search) return state.allModels;
@@ -79,18 +87,19 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
   };
 
   const preview = hovered || state.allModels.find(m => m.id === state.selectedModel.id) || null;
+  const compact = viewportWidth < 900;
 
   return (
     <div ref={panelRef} className="panel-enter" style={{
-      position: 'absolute', top: 70, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
-      width: 'min(560px, 90vw)', maxHeight: 'min(420px, 60vh)', borderRadius: 20,
-      background: 'rgba(12,12,14,0.85)', backdropFilter: 'blur(40px) saturate(160%)',
+      position: 'absolute', top: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
+      width: compact ? 'min(94vw, 520px)' : 'min(480px, 88vw)', maxHeight: compact ? 'min(74vh, 560px)' : 'min(420px, 58vh)', borderRadius: 20,
+      background: 'linear-gradient(180deg, rgba(46,46,50,0.96), rgba(18,18,22,0.96))', backdropFilter: 'blur(40px) saturate(160%)',
       border: '1px solid rgba(255,255,255,0.1)',
       boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
       display: 'flex', overflow: 'hidden',
     }}>
       {/* Left — model list */}
-      <div style={{ width: preview ? '55%' : '100%', display: 'flex', flexDirection: 'column', transition: 'width 0.2s' }}>
+      <div style={{ width: !compact && preview ? '58%' : '100%', display: 'flex', flexDirection: 'column', transition: 'width 0.2s' }}>
         <div style={{ padding: '12px 12px 8px' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search models..."
             autoFocus
@@ -108,7 +117,11 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
                 fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)',
                 textTransform: 'uppercase', letterSpacing: '0.05em',
               }}>
-                <span>{PROVIDER_LOGOS[provider.toLowerCase()] || getProviderEmoji(models[0]?.id || '')}</span>
+                {getProviderLogo(models[0]?.id || '') ? (
+                  <img src={getProviderLogo(models[0]?.id || '') || ''} alt="" style={{ width: 14, height: 14, objectFit: 'contain', borderRadius: 3 }} />
+                ) : (
+                  <span>{PROVIDER_LOGOS[provider.toLowerCase()] || getProviderEmoji(models[0]?.id || '')}</span>
+                )}
                 {provider}
                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>({models.length})</span>
               </div>
@@ -144,15 +157,19 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Right — spec panel */}
-      {preview && (
+      {!compact && preview && (
         <div style={{
-          width: '45%', padding: 16, borderLeft: '1px solid rgba(255,255,255,0.06)',
+          width: '42%', padding: 16, borderLeft: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden',
         }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 4 }}>{preview.name}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>{getProviderEmoji(preview.id)}</span>
+              {getProviderLogo(preview.id) ? (
+                <img src={getProviderLogo(preview.id) || ''} alt="" style={{ width: 16, height: 16, objectFit: 'contain', borderRadius: 4 }} />
+              ) : (
+                <span>{getProviderEmoji(preview.id)}</span>
+              )}
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{getProviderName(preview.id)}</span>
             </div>
           </div>

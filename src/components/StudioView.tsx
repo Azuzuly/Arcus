@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { buildPollinationsImageUrl, getPollinationsBaseUrl, preloadImage } from '@/lib/pollinations';
 
 interface Generation {
   id: string;
@@ -11,13 +12,14 @@ interface Generation {
   timestamp: number;
   status: 'generating' | 'done' | 'error';
   imageUrl?: string;
+  error?: string;
 }
 
 const MODELS = [
-  { id: 'flux-1.1-pro', name: 'FLUX 1.1 Pro', provider: 'Black Forest Labs', emoji: '⚡', desc: 'Highest quality, slower' },
-  { id: 'flux-schnell', name: 'FLUX Schnell', provider: 'Black Forest Labs', emoji: '💨', desc: 'Fast generation' },
-  { id: 'dall-e-3', name: 'DALL-E 3', provider: 'OpenAI', emoji: '🎯', desc: 'Great prompt following' },
-  { id: 'stable-diffusion-xl', name: 'SDXL', provider: 'Stability AI', emoji: '🎨', desc: 'Versatile, customizable' },
+  { id: 'flux', name: 'Flux', provider: 'Pollinations', emoji: '⚡', desc: 'Balanced quality for most prompts' },
+  { id: 'turbo', name: 'Turbo', provider: 'Pollinations', emoji: '💨', desc: 'Faster drafts and rapid iterations' },
+  { id: 'gptimage', name: 'GPT Image', provider: 'Pollinations', emoji: '🧠', desc: 'Strong prompt following for polished scenes' },
+  { id: 'flux-anime', name: 'Flux Anime', provider: 'Pollinations', emoji: '🌸', desc: 'Stylized generations with anime energy' },
 ];
 
 const STYLES = [
@@ -66,35 +68,62 @@ export default function StudioView() {
   const [history, setHistory] = useState<Generation[]>([]);
   const [selected, setSelected] = useState<Generation | null>(null);
   const [subTab, setSubTab] = useState('generate');
+  const [isGenerating, setIsGenerating] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleGenerate = () => {
+  const aspectDimensions = useMemo(() => {
+    switch (aspect) {
+      case '16:9': return { width: 1280, height: 720 };
+      case '9:16': return { width: 720, height: 1280 };
+      case '4:3': return { width: 1152, height: 864 };
+      case '3:2': return { width: 1216, height: 832 };
+      default: return { width: 1024, height: 1024 };
+    }
+  }, [aspect]);
+
+  const stylePrompt = selectedStyle === 'none' ? '' : `, ${selectedStyle.replace(/-/g, ' ')}`;
+
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    const gen: Generation = {
+    setIsGenerating(true);
+
+    const promptWithStyle = `${prompt.trim()}${stylePrompt}`;
+    const generatedItems: Generation[] = Array.from({ length: count }, (_, index) => ({
       id: crypto.randomUUID(),
-      prompt: prompt.trim(),
+      prompt: promptWithStyle,
       model: selectedModel.name,
       style: selectedStyle,
       aspect,
-      timestamp: Date.now(),
+      timestamp: Date.now() + index,
       status: 'generating',
-    };
-    setHistory(prev => [gen, ...prev]);
-    setSelected(gen);
+    }));
 
-    // Simulate generation (replace with real Puter.js call later)
-    setTimeout(() => {
-      setHistory(prev => prev.map(g => g.id === gen.id ? {
-        ...g,
-        status: 'done',
-        imageUrl: `https://picsum.photos/seed/${gen.id}/${aspect === '9:16' ? '512/912' : aspect === '16:9' ? '912/512' : '512/512'}`,
-      } : g));
-      setSelected(prev => prev?.id === gen.id ? {
-        ...prev,
-        status: 'done',
-        imageUrl: `https://picsum.photos/seed/${gen.id}/${aspect === '9:16' ? '512/912' : aspect === '16:9' ? '912/512' : '512/512'}`,
-      } : prev);
-    }, 2500);
+    setHistory(prev => [...generatedItems, ...prev]);
+    setSelected(generatedItems[0]);
+
+    await Promise.allSettled(generatedItems.map(async (generation, index) => {
+      const generationSeed = seed.trim() || `${Date.now()}-${index}`;
+      const imageUrl = buildPollinationsImageUrl({
+        prompt: promptWithStyle,
+        negativePrompt: negPrompt.trim() || undefined,
+        model: selectedModel.id,
+        width: aspectDimensions.width,
+        height: aspectDimensions.height,
+        seed: generationSeed,
+      });
+
+      try {
+        await preloadImage(imageUrl);
+        setHistory(prev => prev.map(item => item.id === generation.id ? { ...item, status: 'done', imageUrl } : item));
+        setSelected(prev => prev?.id === generation.id ? { ...prev, status: 'done', imageUrl } : prev);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Generation failed.';
+        setHistory(prev => prev.map(item => item.id === generation.id ? { ...item, status: 'error', error: message } : item));
+        setSelected(prev => prev?.id === generation.id ? { ...prev, status: 'error', error: message } : prev);
+      }
+    }));
+
+    setIsGenerating(false);
   };
 
   const SUB_TABS = [
@@ -113,6 +142,9 @@ export default function StudioView() {
         background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
+        <div style={{ position: 'absolute', left: 16, fontSize: 11, color: 'rgba(255,255,255,0.42)' }}>
+          Pollinations API · {getPollinationsBaseUrl()}
+        </div>
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} title={t.desc} style={{
             padding: '7px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
@@ -147,7 +179,7 @@ export default function StudioView() {
                   <span style={{ fontSize: 18 }}>{m.emoji}</span>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>{m.name}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{m.desc}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{m.provider} · {m.desc}</div>
                   </div>
                 </button>
               ))}
@@ -284,12 +316,26 @@ export default function StudioView() {
             boxShadow: prompt.trim() ? '0 4px 24px rgba(59,130,246,0.3)' : 'none',
             transition: 'all 0.2s',
           }}>
-            ✦ Generate {count > 1 ? `(${count})` : ''}
+            {isGenerating ? 'Generating…' : `✦ Generate ${count > 1 ? `(${count})` : ''}`}
           </button>
         </div>
 
         {/* Center — Canvas / Gallery */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px, 2vw, 24px)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {subTab !== 'generate' && (
+            <div style={{
+              borderRadius: 18,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.03)',
+              padding: '18px 20px',
+              color: 'rgba(255,255,255,0.72)',
+            }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>{SUB_TABS.find(tab => tab.id === subTab)?.label}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+                Pollinations generation is live for the main Studio flow now. The edit, upscale, and describe lanes are queued next so the whole image lab stays on the same backend.
+              </div>
+            </div>
+          )}
           {history.length === 0 ? (
             <div style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -339,6 +385,15 @@ export default function StudioView() {
                       }} />
                       <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Creating your image...</span>
                     </div>
+                  ) : selected.status === 'error' ? (
+                    <div style={{
+                      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24, textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: 36 }}>⚠️</div>
+                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>Generation failed</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.56)', maxWidth: 320 }}>{selected.error || 'Pollinations did not return an image in time.'}</div>
+                    </div>
                   ) : selected.imageUrl ? (
                     <img src={selected.imageUrl} alt={selected.prompt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : null}
@@ -350,7 +405,10 @@ export default function StudioView() {
                   padding: '8px 0',
                 }}>
                   {['⬇ Download', '🔄 Regenerate', '✎ Edit', '⬆ Upscale'].map(a => (
-                    <button key={a} style={{
+                    <button key={a} onClick={() => {
+                      if (a === '⬇ Download' && selected.imageUrl) window.open(selected.imageUrl, '_blank', 'noopener,noreferrer');
+                      if (a === '🔄 Regenerate') void handleGenerate();
+                    }} style={{
                       padding: '6px 14px', borderRadius: 8, fontSize: 12,
                       background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                       color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit',
@@ -374,6 +432,8 @@ export default function StudioView() {
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(59,130,246,0.2)', borderTopColor: '#3B82F6', animation: 'spin 0.8s linear infinite' }} />
                         </div>
+                      ) : g.status === 'error' ? (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>⚠️</div>
                       ) : g.imageUrl ? (
                         <img src={g.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : null}

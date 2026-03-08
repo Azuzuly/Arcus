@@ -2,6 +2,15 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+interface RunLogEntry {
+  id: string;
+  nodeId: string;
+  nodeLabel: string;
+  status: 'running' | 'success' | 'error';
+  detail: string;
+  timestamp: number;
+}
+
 interface AgentNode {
   id: string;
   type: 'trigger' | 'model' | 'tool' | 'logic' | 'output';
@@ -10,6 +19,7 @@ interface AgentNode {
   x: number;
   y: number;
   config: Record<string, string>;
+  status?: 'idle' | 'running' | 'success' | 'error';
 }
 
 interface Edge {
@@ -94,17 +104,20 @@ export default function AgentView() {
   const [showLibrary, setShowLibrary] = useState(true);
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [isRunning, setIsRunning] = useState(false);
+  const [runLog, setRunLog] = useState<RunLogEntry[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const addNode = (item: { type: AgentNode['type']; label: string; emoji: string }) => {
+    const offsetIndex = nodes.length;
     const node: AgentNode = {
       id: crypto.randomUUID(),
       type: item.type,
       label: item.label,
       emoji: item.emoji,
-      x: 300 + Math.random() * 200 - pan.x,
-      y: 200 + Math.random() * 100 - pan.y,
+      x: 300 + (offsetIndex % 4) * 54 - pan.x,
+      y: 200 + (offsetIndex % 3) * 42 - pan.y,
       config: {},
+      status: 'idle',
     };
     setNodes(prev => [...prev, node]);
   };
@@ -114,6 +127,7 @@ export default function AgentView() {
       id: crypto.randomUUID(),
       ...n,
       config: {},
+      status: 'idle' as const,
     }));
     const newEdges: Edge[] = [];
     for (let i = 0; i < newNodes.length - 1; i++) {
@@ -122,6 +136,52 @@ export default function AgentView() {
     setNodes(newNodes);
     setEdges(newEdges);
     setWorkflowName(t.name);
+    setRunLog([]);
+  };
+
+  const autoLayout = () => {
+    setNodes(prev => prev.map((node, index) => ({
+      ...node,
+      x: 110 + (index % 3) * 250,
+      y: 120 + Math.floor(index / 3) * 140,
+    })));
+  };
+
+  const simulateRun = async () => {
+    if (nodes.length === 0) return;
+
+    setIsRunning(true);
+    setRunLog([]);
+
+    const orderedNodes = [...nodes].sort((a, b) => a.x - b.x || a.y - b.y);
+    setNodes(prev => prev.map(node => ({ ...node, status: 'idle' })));
+
+    for (const node of orderedNodes) {
+      setNodes(prev => prev.map(item => item.id === node.id ? { ...item, status: 'running' } : item));
+      setRunLog(prev => [{
+        id: crypto.randomUUID(),
+        nodeId: node.id,
+        nodeLabel: node.label,
+        status: 'running' as const,
+        detail: `${node.label} is processing...`,
+        timestamp: Date.now(),
+      }, ...prev].slice(0, 20));
+
+      await new Promise(resolve => setTimeout(resolve, 420));
+
+      const status: RunLogEntry['status'] = node.type === 'logic' && node.label === 'Condition' ? 'success' : 'success';
+      setNodes(prev => prev.map(item => item.id === node.id ? { ...item, status } : item));
+      setRunLog(prev => [{
+        id: crypto.randomUUID(),
+        nodeId: node.id,
+        nodeLabel: node.label,
+        status,
+        detail: status === 'success' ? `${node.label} completed successfully.` : `${node.label} hit an error.`,
+        timestamp: Date.now(),
+      }, ...prev].slice(0, 20));
+    }
+
+    setIsRunning(false);
   };
 
   const deleteNode = (id: string) => {
@@ -203,12 +263,25 @@ export default function AgentView() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{nodes.length} nodes · {edges.length} connections</span>
+          <span style={{
+            padding: '5px 10px', borderRadius: 999,
+            background: isRunning ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${isRunning ? 'rgba(16,185,129,0.24)' : 'rgba(255,255,255,0.08)'}`,
+            color: isRunning ? '#10B981' : 'rgba(255,255,255,0.42)',
+            fontSize: 11,
+            fontWeight: 700,
+          }}>{isRunning ? 'RUNNING' : 'IDLE'}</span>
+          <button onClick={autoLayout} style={{
+            padding: '6px 14px', borderRadius: 8, fontSize: 12,
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Auto-layout</button>
           <button onClick={() => { setNodes([]); setEdges([]); setSelectedNode(null); }} style={{
             padding: '6px 14px', borderRadius: 8, fontSize: 12,
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
             color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit',
           }}>Clear</button>
-          <button onClick={() => setIsRunning(!isRunning)} style={{
+          <button onClick={() => { if (!isRunning) { void simulateRun(); } else { setIsRunning(false); setNodes(prev => prev.map(node => ({ ...node, status: 'idle' }))); } }} style={{
             padding: '6px 18px', borderRadius: 8, fontSize: 12, fontWeight: 600,
             background: isRunning ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
             border: isRunning ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)',
@@ -344,8 +417,12 @@ export default function AgentView() {
                 borderRadius: 14,
                 background: 'rgba(18,18,20,0.9)',
                 backdropFilter: 'blur(16px)',
-                border: `1.5px solid ${selectedNode === node.id ? TYPE_COLORS[node.type] : 'rgba(255,255,255,0.08)'}`,
-                boxShadow: selectedNode === node.id ? `0 0 20px ${TYPE_COLORS[node.type]}33` : '0 4px 16px rgba(0,0,0,0.3)',
+                border: `1.5px solid ${node.status === 'running' ? '#10B981' : node.status === 'success' ? 'rgba(111,177,120,0.6)' : node.status === 'error' ? '#EF4444' : selectedNode === node.id ? TYPE_COLORS[node.type] : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: node.status === 'running'
+                  ? '0 0 22px rgba(16,185,129,0.22)'
+                  : selectedNode === node.id
+                    ? `0 0 20px ${TYPE_COLORS[node.type]}33`
+                    : '0 4px 16px rgba(0,0,0,0.3)',
                 cursor: 'grab', userSelect: 'none' as const,
                 transition: 'border-color 0.15s, box-shadow 0.15s',
               }}>
@@ -355,7 +432,7 @@ export default function AgentView() {
                 <span style={{ fontSize: 18 }}>{node.emoji}</span>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{node.label}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'capitalize' }}>{node.type}</div>
+                  <div style={{ fontSize: 10, color: node.status === 'running' ? '#10B981' : 'rgba(255,255,255,0.35)', textTransform: 'capitalize' }}>{node.status === 'running' ? 'running' : node.type}</div>
                 </div>
               </div>
               {/* Connection dots */}
@@ -403,6 +480,37 @@ export default function AgentView() {
             <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={{ padding: '0 8px', height: 32, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>{Math.round(zoom * 100)}%</button>
             <button onClick={() => setZoom(z => Math.max(0.3, z - 0.1))} style={{ width: 32, height: 32, borderRadius: 8, background: 'transparent', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer' }}>−</button>
           </div>
+
+          {runLog.length > 0 && (
+            <div style={{
+              position: 'absolute', left: 16, bottom: 16, zIndex: 10,
+              width: 'min(360px, calc(100% - 100px))',
+              background: 'rgba(12,12,14,0.82)', backdropFilter: 'blur(20px)',
+              borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', padding: 12,
+              display: 'grid', gap: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Execution feed</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{runLog.length} events</div>
+              </div>
+              <div style={{ display: 'grid', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+                {runLog.map(entry => (
+                  <div key={entry.id} style={{
+                    borderRadius: 12,
+                    padding: '9px 10px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{entry.nodeLabel}</div>
+                      <div style={{ fontSize: 10, color: entry.status === 'success' ? '#10B981' : entry.status === 'error' ? '#EF4444' : '#F59E0B', textTransform: 'uppercase', fontWeight: 700 }}>{entry.status}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>{entry.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Inspector Panel */}

@@ -3,10 +3,13 @@
 import { useStore } from '@/lib/store';
 import { useState, useRef, useEffect } from 'react';
 import { TabType } from '@/lib/types';
+import { insforge } from '@/lib/insforge';
+import { brandLogoUrl } from '@/lib/providerLogos';
 
 export default function TopNav() {
   const { state, dispatch } = useStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,10 +20,16 @@ export default function TopNav() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    const syncViewport = () => setIsCompact(window.innerWidth <= 860);
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+    return () => window.removeEventListener('resize', syncViewport);
+  }, []);
+
   const tabs: { label: string; value: TabType }[] = [
     { label: 'Home', value: 'home' },
     { label: 'Studio', value: 'studio' },
-    { label: 'Agent', value: 'agent' },
   ];
 
   return (
@@ -28,12 +37,23 @@ export default function TopNav() {
       flexShrink: 0, height: 64, width: '100%', position: 'sticky', top: 0, zIndex: 100,
       background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--glass-border)',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isCompact ? '0 14px' : '0 24px',
     }}>
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ color: 'var(--accent-blue)', fontSize: 16 }}>◆</span>
-        <span style={{ color: '#fff', fontWeight: 600, fontSize: 18, letterSpacing: '-0.01em' }}>Arcus</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 8 : 10, minWidth: 0 }}>
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
+          style={{
+            width: 34, height: 34, borderRadius: 12, border: '1px solid var(--glass-border)',
+            background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+          }}
+          title="Toggle sidebar"
+        >
+          ☰
+        </button>
+        <img src={brandLogoUrl} alt="Arcus" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        {!isCompact && <span style={{ color: '#fff', fontWeight: 700, fontSize: 18, letterSpacing: '-0.01em' }}>Arcus</span>}
       </div>
 
       {/* Tab Control */}
@@ -42,11 +62,11 @@ export default function TopNav() {
         display: 'flex', alignItems: 'center',
         background: 'var(--glass-panel)', backdropFilter: 'blur(22px)',
         border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)',
-        padding: 4, gap: 2,
+        padding: 4, gap: 2, maxWidth: isCompact ? '42vw' : undefined,
       }}>
         {tabs.map(t => (
           <button key={t.value} onClick={() => dispatch({ type: 'SET_TAB', tab: t.value })} style={{
-            padding: '6px 20px', borderRadius: 'var(--radius-xs)', fontSize: 14, fontWeight: 500,
+            padding: isCompact ? '6px 12px' : '6px 20px', borderRadius: 'var(--radius-xs)', fontSize: isCompact ? 12 : 14, fontWeight: 500,
             color: state.activeTab === t.value ? '#0A0A0A' : 'var(--text-secondary)',
             background: state.activeTab === t.value ? '#FFFFFF' : 'transparent',
             border: 'none', cursor: 'pointer',
@@ -76,8 +96,8 @@ export default function TopNav() {
               {state.user.avatar}
             </div>
           )}
-          <span style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500 }}>{state.user.username}</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>▾</span>
+          {!isCompact && <span style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{state.user.username}</span>}
+          {!isCompact && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>▾</span>}
         </button>
 
         {dropdownOpen && (
@@ -91,7 +111,7 @@ export default function TopNav() {
               { icon: '⚙', label: 'Settings', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'settings' }); setDropdownOpen(false); } },
               { icon: '⬆', label: 'Upgrade', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'pricing' }); setDropdownOpen(false); } },
               { icon: '✉', label: 'Feedback', action: () => { window.open('mailto:feedback@arcus.ai'); setDropdownOpen(false); } },
-              { icon: '⏻', label: 'Sign Out', action: () => { dispatch({ type: 'SIGN_OUT' }); window.location.reload(); } },
+              { icon: '⏻', label: 'Sign Out', action: async () => { await insforge.auth.signOut(); dispatch({ type: 'SIGN_OUT' }); window.location.reload(); } },
             ].map(item => (
               <button key={item.label} onClick={item.action} style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px',

@@ -3,7 +3,8 @@
 import { useStore } from '@/lib/store';
 import { useState } from 'react';
 import { getAvatarInitials, getAvatarColor } from '@/lib/utils';
-import { setStorageImmediate } from '@/lib/storage';
+import { buildUniqueUsername } from '@/lib/auth';
+import { insforge } from '@/lib/insforge';
 
 export default function SettingsModal() {
   const { state, dispatch, showToast } = useStore();
@@ -21,20 +22,29 @@ export default function SettingsModal() {
 
   const ACCENT_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#10B981', '#06B6D4', '#84CC16', '#fff'];
 
-  const saveUsername = () => {
-    if (username.trim()) {
-      setStorageImmediate('username', username.trim());
-      dispatch({
-        type: 'SET_USER',
-        user: {
-          ...state.user,
-          username: username.trim(),
-          avatar: getAvatarInitials(username.trim()),
-          avatarColor: getAvatarColor(username.trim()),
-        },
-      });
-      showToast('Username updated', 'success');
+  const saveUsername = async () => {
+    if (!username.trim() || !state.user.id) return;
+    const uniqueUsername = buildUniqueUsername(username.trim(), state.user.id);
+    const { error } = await insforge.auth.setProfile({
+      name: uniqueUsername,
+      username: uniqueUsername,
+      preferred_name: username.trim(),
+    });
+    if (error) {
+      showToast(error.message || 'Could not update username', 'error');
+      return;
     }
+    dispatch({
+      type: 'SET_USER',
+      user: {
+        ...state.user,
+        username: uniqueUsername,
+        avatar: getAvatarInitials(uniqueUsername),
+        avatarColor: getAvatarColor(uniqueUsername),
+      },
+    });
+    setUsername(uniqueUsername);
+    showToast('Username updated', 'success');
   };
 
   const saveBg = () => {
@@ -124,6 +134,11 @@ export default function SettingsModal() {
                     style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
                   <button onClick={saveUsername} style={{ padding: '8px 14px', background: '#3B82F6', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
                 </div>
+                {state.user.id && (
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>
+                    Arcus stores a unique handle like <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 6 }}>{buildUniqueUsername(username || 'arcus', state.user.id)}</code>
+                  </div>
+                )}
               </div>
 
               {/* Danger zone */}
@@ -185,7 +200,7 @@ export default function SettingsModal() {
                 An intelligent AI workspace that lets you chat with 500+ models, generate images, and build AI agent workflows — all in one place.
               </p>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.6 }}>
-                Powered by <a href="https://puter.com" target="_blank" rel="noopener" style={{ color: '#3B82F6' }}>Puter.js</a> — no API keys required.
+                Powered by Puter.js, InsForge auth, and live search integrations.
               </p>
               <a href="https://github.com/Azuzuly/Arcus" target="_blank" rel="noopener" style={{ color: '#3B82F6', fontSize: 14 }}>GitHub Repository ↗</a>
             </div>

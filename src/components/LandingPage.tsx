@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { brandLogoUrl, getProviderLogo } from '@/lib/providerLogos';
 
 const FEATURES = [
   { emoji: '💬', title: '500+ AI Models', desc: 'Access GPT-5.4, Claude Opus 4, Gemini 3.1 Pro, DeepSeek R1, Llama 4, Grok 3, and hundreds more — all from one unified interface. Switch between models mid-conversation.' },
   { emoji: '🎨', title: 'AI Studio', desc: 'Generate stunning images with FLUX, DALL-E, and Stable Diffusion. Create videos, upscale photos, and experiment with multiple art styles and aspect ratios.' },
   { emoji: '🤖', title: 'Agent Builder', desc: 'Design complex AI workflows visually. Drag and drop nodes, connect triggers to actions, chain multiple models together, and automate repetitive tasks.' },
   { emoji: '⚡', title: 'Real-time Streaming', desc: 'Watch AI responses appear word by word in real-time. No waiting for complete responses — start reading and reacting immediately.' },
-  { emoji: '🔒', title: 'Zero Configuration', desc: 'No API keys, no accounts, no credit cards. Open the app and start chatting instantly. Your conversations stay in your browser.' },
+  { emoji: '🔒', title: 'Account-Gated Security', desc: 'Create an account once, keep your identity consistent, and unlock the full Arcus workspace with synced preferences.' },
   { emoji: '🌙', title: 'Liquid Glass UI', desc: 'A beautiful dark interface with glassmorphism effects, aurora animations, and smooth transitions. Designed for focus and long creative sessions.' },
 ];
 
@@ -47,7 +48,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div style={{
-      height: '100vh', background: '#050505', color: '#fff',
+      height: '100vh', background: 'transparent', color: '#fff',
       fontFamily: "'Geist', -apple-system, sans-serif", overflowX: 'hidden', overflowY: 'auto',
     }}>
       {/* Aurora bg */}
@@ -77,7 +78,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         background: 'rgba(5,5,5,0.8)', backdropFilter: 'blur(20px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#3B82F6', fontSize: 24 }}>◆</span>
+          <img src={brandLogoUrl} alt="Arcus" style={{ width: 30, height: 30, objectFit: 'contain' }} />
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>Arcus</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 2vw, 24px)' }}>
@@ -102,7 +103,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
           background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
           borderRadius: 20, fontSize: 13, color: '#3B82F6', marginBottom: 32,
         }}>
-          <span>✦</span> 500+ AI models — completely free
+          <span>✦</span> 500+ AI models with account-based access
         </div>
         <h1 style={{
           fontSize: 'clamp(36px, 7vw, 72px)', fontWeight: 700,
@@ -116,8 +117,8 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
           fontSize: 'clamp(15px, 2.5vw, 20px)', color: '#A1A1AA',
           maxWidth: 600, lineHeight: 1.6, marginBottom: 48,
         }}>
-          Chat with Claude, GPT-5, Gemini, and hundreds more. Generate images. Build AI agents.
-          No API keys, no sign-ups — just start creating.
+          Chat with Claude, GPT-5, Gemini, and hundreds more. Generate images. Build AI workflows.
+          Create your account once, then keep your personalized Arcus workspace everywhere.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
           <button onClick={onEnter} style={{
@@ -127,7 +128,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
           }}
           onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 60px rgba(59,130,246,0.4)'; }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(59,130,246,0.3)'; }}>
-            Start Chatting — It&apos;s Free
+            Launch Arcus →
           </button>
           <a href="https://github.com/Azuzuly/Arcus" target="_blank" rel="noopener" style={{
             padding: '16px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
@@ -169,7 +170,11 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
               border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12,
               display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
             }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: m.color }} />
+              {getProviderLogo(`${m.provider.toLowerCase()}/x`) ? (
+                <img src={getProviderLogo(`${m.provider.toLowerCase()}/x`) || ''} alt="" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 4 }} />
+              ) : (
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: m.color }} />
+              )}
               <span style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</span>
               <span style={{ fontSize: 12, color: '#52525B' }}>{m.provider}</span>
             </div>
@@ -254,9 +259,9 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {[
-            { step: '01', title: 'Open Arcus', desc: 'No sign-ups, no downloads. Just open the app in your browser and you\'re ready.' },
+            { step: '01', title: 'Create your account', desc: 'Set your email, verify it, and get your unique Arcus handle.' },
             { step: '02', title: 'Choose your model', desc: 'Pick from 500+ AI models across all major providers. Switch freely anytime.' },
-            { step: '03', title: 'Start creating', desc: 'Chat, generate images, build agents — the entire AI ecosystem at your fingertips.' },
+            { step: '03', title: 'Start creating', desc: 'Chat, research, generate images, and build AI workflows in one place.' },
           ].map(s => (
             <div key={s.step} style={{
               display: 'flex', gap: 20, alignItems: 'flex-start',

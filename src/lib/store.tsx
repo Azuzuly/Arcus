@@ -4,14 +4,17 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import {
   Conversation, SelectedModel, ChatSettings, MemoryItem, UsageData,
   TabType, ModalType, SettingsSection, ToastType, ModelInfo,
-  AgentNode, AgentEdge, ExecutionLogEntry, StudioGeneration,
+  AgentNode, AgentEdge, ExecutionLogEntry, StudioGeneration, PersonalizationSettings,
 } from './types';
-import { getStorage, setStorage, setStorageImmediate, clearAllStorage } from './storage';
+import { getStorage, setStorage, clearAllStorage } from './storage';
 import { generateUUID, getAvatarInitials, getAvatarColor } from './utils';
+import { insforge } from './insforge';
+import { createGuestUserState, mapInsforgeUserToStateUser } from './auth';
+import { fetchRemoteConversations, syncRemoteConversations } from './remoteSync';
 
 /* ---------- State shape ---------- */
 export interface AppState {
-  user: { username: string; apiKey: string; tier: 'free' | 'pro'; avatar: string; avatarColor: string };
+  user: { id: string; email: string; emailVerified: boolean; username: string; apiKey: string; tier: 'free' | 'pro'; avatar: string; avatarColor: string };
   activeTab: TabType;
   conversations: Conversation[];
   activeChatId: string | null;
@@ -24,6 +27,7 @@ export interface AppState {
   agent: { nodes: AgentNode[]; edges: AgentEdge[]; selectedNodeId: string | null; workflowName: string; isRunning: boolean; executionLog: ExecutionLogEntry[] };
   ui: { sidebarCollapsed: boolean; activeModal: ModalType; activeSettingsSection: SettingsSection; chatSettingsPanelOpen: boolean };
   memory: { enabled: boolean; items: MemoryItem[] };
+  preferences: PersonalizationSettings;
   usage: UsageData;
   toasts: { id: string; message: string; type: ToastType }[];
   modalData: Record<string, unknown>;
@@ -36,11 +40,23 @@ const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   topK: 0, frequencyPenalty: 0, presencePenalty: 0,
 };
 
+const DEFAULT_PREFERENCES: PersonalizationSettings = {
+  webSearchEnabled: true,
+  autoWebSearch: true,
+  responseStyle: 'balanced',
+  researchDepth: 'deep',
+  trustedDomains: [],
+};
+
 const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic' };
+
+function sortConversations(conversations: Conversation[]): Conversation[] {
+  return [...conversations].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+}
 
 function initialState(): AppState {
   return {
-    user: { username: '', apiKey: '', tier: 'free', avatar: '', avatarColor: '' },
+    user: createGuestUserState(),
     activeTab: 'home',
     conversations: [],
     activeChatId: null,
@@ -53,6 +69,7 @@ function initialState(): AppState {
     agent: { nodes: [], edges: [], selectedNodeId: null, workflowName: 'Untitled Workflow', isRunning: false, executionLog: [] },
     ui: { sidebarCollapsed: false, activeModal: null, activeSettingsSection: 'account', chatSettingsPanelOpen: false },
     memory: { enabled: true, items: [] },
+    preferences: { ...DEFAULT_PREFERENCES },
     usage: { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} },
     toasts: [],
     modalData: {},
@@ -80,6 +97,7 @@ type Action =
   | { type: 'SHOW_MODAL'; modal: ModalType; data?: Record<string, unknown> }
   | { type: 'HIDE_MODAL' }
   | { type: 'SET_MEMORY'; memory: Partial<AppState['memory']> }
+  | { type: 'SET_PREFERENCES'; preferences: Partial<PersonalizationSettings> }
   | { type: 'ADD_MEMORY_ITEM'; item: MemoryItem }
   | { type: 'REMOVE_MEMORY_ITEM'; id: string }
   | { type: 'SET_USAGE'; usage: Partial<UsageData> }
@@ -94,6 +112,7 @@ type Action =
   | { type: 'REMOVE_AGENT_EDGE'; id: string }
   | { type: 'SET_STUDIO'; studio: Partial<AppState['studio']> }
   | { type: 'SET_SETTINGS'; settings: Partial<AppState['settings']> }
+  | { type: 'TOGGLE_PIN_CONVERSATION'; id: string }
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SIGN_OUT' };
 
@@ -102,11 +121,11 @@ function reducer(state: AppState, action: Action): AppState {
     case 'INIT': return { ...state, ...action.state, initialized: true };
     case 'SET_USER': return { ...state, user: action.user };
     case 'SET_TAB': return { ...state, activeTab: action.tab };
-    case 'SET_CONVERSATIONS': return { ...state, conversations: action.conversations };
-    case 'ADD_CONVERSATION': return { ...state, conversations: [action.conversation, ...state.conversations] };
+    case 'SET_CONVERSATIONS': return { ...state, conversations: sortConversations(action.conversations) };
+    case 'ADD_CONVERSATION': return { ...state, conversations: sortConversations([action.conversation, ...state.conversations]) };
     case 'UPDATE_CONVERSATION': return {
       ...state,
-      conversations: state.conversations.map(c => c.id === action.id ? { ...c, ...action.updates, updatedAt: Date.now() } : c),
+      conversations: sortConversations(state.conversations.map(c => c.id === action.id ? { ...c, ...action.updates, updatedAt: Date.now() } : c)),
     };
     case 'REMOVE_CONVERSATION': {
       const convs = state.conversations.filter(c => c.id !== action.id);
@@ -127,6 +146,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SHOW_MODAL': return { ...state, ui: { ...state.ui, activeModal: action.modal }, modalData: action.data || {} };
     case 'HIDE_MODAL': return { ...state, ui: { ...state.ui, activeModal: null }, modalData: {} };
     case 'SET_MEMORY': return { ...state, memory: { ...state.memory, ...action.memory } };
+    case 'SET_PREFERENCES': return { ...state, preferences: { ...state.preferences, ...action.preferences } };
     case 'ADD_MEMORY_ITEM': return { ...state, memory: { ...state.memory, items: [...state.memory.items, action.item] } };
     case 'REMOVE_MEMORY_ITEM': return { ...state, memory: { ...state.memory, items: state.memory.items.filter(i => i.id !== action.id) } };
     case 'SET_USAGE': return { ...state, usage: { ...state.usage, ...action.usage } };
@@ -151,6 +171,12 @@ function reducer(state: AppState, action: Action): AppState {
     case 'REMOVE_AGENT_EDGE': return { ...state, agent: { ...state.agent, edges: state.agent.edges.filter(e => e.id !== action.id) } };
     case 'SET_STUDIO': return { ...state, studio: { ...state.studio, ...action.studio } };
     case 'SET_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings } };
+    case 'TOGGLE_PIN_CONVERSATION': return {
+      ...state,
+      conversations: sortConversations(
+        state.conversations.map(c => c.id === action.id ? { ...c, pinned: !c.pinned, updatedAt: Date.now() } : c)
+      ),
+    };
     case 'TOGGLE_SIDEBAR': return { ...state, ui: { ...state.ui, sidebarCollapsed: !state.ui.sidebarCollapsed } };
     case 'SIGN_OUT': { clearAllStorage(); return initialState(); }
     default: return state;
@@ -171,39 +197,80 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState());
   const stateRef = useRef(state);
-  stateRef.current = state;
+  const hasHydratedRemoteRef = useRef(false);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Load from localStorage on mount
   useEffect(() => {
-    const username = getStorage<string>('username', '');
-    const apiKey = getStorage<string>('api_key', '');
-    const tier = getStorage<'free' | 'pro'>('tier', 'free');
-    const conversations = getStorage<Conversation[]>('conversations', []);
-    const model = getStorage<SelectedModel>('model', DEFAULT_MODEL);
-    const memory = getStorage<AppState['memory']>('memory', { enabled: true, items: [] });
-    const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
-    const favorites = getStorage<string[]>('favorites', []);
-    const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
+    let cancelled = false;
 
-    dispatch({
-      type: 'INIT',
-      state: {
-        user: {
-          username,
-          apiKey,
-          tier,
-          avatar: username ? getAvatarInitials(username) : '',
-          avatarColor: username ? getAvatarColor(username) : '#3B82F6',
+    const boot = async () => {
+      const model = getStorage<SelectedModel>('model', DEFAULT_MODEL);
+      const memory = getStorage<AppState['memory']>('memory', { enabled: true, items: [] });
+      const preferences = getStorage<PersonalizationSettings>('preferences', DEFAULT_PREFERENCES);
+      const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
+      const favorites = getStorage<string[]>('favorites', []);
+      const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
+      const cachedConversations = getStorage<Conversation[]>('conversations', []);
+      let user = createGuestUserState();
+
+      const { data } = await insforge.auth.getCurrentSession();
+      if (data.session?.user) {
+        user = mapInsforgeUserToStateUser(data.session.user);
+      }
+
+      let mergedConversations = sortConversations(cachedConversations);
+
+      if (user.id) {
+        try {
+          const remoteConversations = await fetchRemoteConversations(user.id, DEFAULT_CHAT_SETTINGS);
+          const localById = new Map(cachedConversations.map(conversation => [conversation.id, conversation]));
+          mergedConversations = sortConversations(remoteConversations.map(remoteConversation => {
+            const localConversation = localById.get(remoteConversation.id);
+
+            if (!localConversation) return remoteConversation;
+
+            return localConversation.updatedAt >= remoteConversation.updatedAt
+              ? localConversation
+              : {
+                  ...remoteConversation,
+                  settings: localConversation.settings,
+                  pinned: localConversation.pinned,
+                };
+          }).concat(cachedConversations.filter(conversation => !remoteConversations.some(remote => remote.id === conversation.id))));
+        } catch {
+          mergedConversations = sortConversations(cachedConversations);
+        }
+      }
+
+      if (cancelled) return;
+
+      hasHydratedRemoteRef.current = true;
+
+      dispatch({
+        type: 'INIT',
+        state: {
+          user,
+          conversations: mergedConversations,
+          activeChatId: mergedConversations[0]?.id || null,
+          selectedModel: model,
+          memory,
+          preferences,
+          usage,
+          favoriteModelIds: favorites,
+          settings: savedSettings,
         },
-        conversations: conversations.sort((a, b) => b.updatedAt - a.updatedAt),
-        activeChatId: conversations[0]?.id || null,
-        selectedModel: model,
-        memory,
-        usage,
-        favoriteModelIds: favorites,
-        settings: savedSettings,
-      },
-    });
+      });
+    };
+
+    void boot();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persist to localStorage on changes
@@ -212,10 +279,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setStorage('conversations', state.conversations);
     setStorage('model', state.selectedModel);
     setStorage('memory', state.memory);
+    setStorage('preferences', state.preferences);
     setStorage('usage', state.usage);
     setStorage('favorites', state.favoriteModelIds);
     setStorage('settings', state.settings);
-  }, [state.conversations, state.selectedModel, state.memory, state.usage, state.favoriteModelIds, state.settings, state.initialized]);
+  }, [state.conversations, state.selectedModel, state.memory, state.preferences, state.usage, state.favoriteModelIds, state.settings, state.initialized]);
+
+  useEffect(() => {
+    if (!state.initialized || !state.user.id || !hasHydratedRemoteRef.current) return;
+
+    const timer = setTimeout(() => {
+      void syncRemoteConversations(state.user.id, state.conversations).catch(() => {
+        // keep local experience resilient even if remote sync fails
+      });
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [state.conversations, state.initialized, state.user.id]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = generateUUID();
