@@ -65,13 +65,17 @@ export default function TopNav() {
           display: 'flex', alignItems: 'center', gap: 8, background: 'transparent',
           border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-xs)',
         }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: state.user.avatarColor,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 600, color: '#fff',
-          }}>
-            {state.user.avatar}
-          </div>
+          {state.settings?.profileImage ? (
+            <img src={state.settings.profileImage} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', background: state.user.avatarColor,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 600, color: '#fff',
+            }}>
+              {state.user.avatar}
+            </div>
+          )}
           <span style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500 }}>{state.user.username}</span>
           <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>▾</span>
         </button>

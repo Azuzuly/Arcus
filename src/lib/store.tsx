@@ -27,6 +27,7 @@ export interface AppState {
   usage: UsageData;
   toasts: { id: string; message: string; type: ToastType }[];
   modalData: Record<string, unknown>;
+  settings: { backgroundImage: string; accentColor: string; profileImage: string };
   initialized: boolean;
 }
 
@@ -55,6 +56,7 @@ function initialState(): AppState {
     usage: { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} },
     toasts: [],
     modalData: {},
+    settings: { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' },
     initialized: false,
   };
 }
@@ -91,6 +93,7 @@ type Action =
   | { type: 'ADD_AGENT_EDGE'; edge: AgentEdge }
   | { type: 'REMOVE_AGENT_EDGE'; id: string }
   | { type: 'SET_STUDIO'; studio: Partial<AppState['studio']> }
+  | { type: 'SET_SETTINGS'; settings: Partial<AppState['settings']> }
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SIGN_OUT' };
 
@@ -147,6 +150,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_AGENT_EDGE': return { ...state, agent: { ...state.agent, edges: [...state.agent.edges, action.edge] } };
     case 'REMOVE_AGENT_EDGE': return { ...state, agent: { ...state.agent, edges: state.agent.edges.filter(e => e.id !== action.id) } };
     case 'SET_STUDIO': return { ...state, studio: { ...state.studio, ...action.studio } };
+    case 'SET_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings } };
     case 'TOGGLE_SIDEBAR': return { ...state, ui: { ...state.ui, sidebarCollapsed: !state.ui.sidebarCollapsed } };
     case 'SIGN_OUT': { clearAllStorage(); return initialState(); }
     default: return state;
@@ -179,6 +183,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const memory = getStorage<AppState['memory']>('memory', { enabled: true, items: [] });
     const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
     const favorites = getStorage<string[]>('favorites', []);
+    const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
 
     dispatch({
       type: 'INIT',
@@ -196,6 +201,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         memory,
         usage,
         favoriteModelIds: favorites,
+        settings: savedSettings,
       },
     });
   }, []);
@@ -208,7 +214,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setStorage('memory', state.memory);
     setStorage('usage', state.usage);
     setStorage('favorites', state.favoriteModelIds);
-  }, [state.conversations, state.selectedModel, state.memory, state.usage, state.favoriteModelIds, state.initialized]);
+    setStorage('settings', state.settings);
+  }, [state.conversations, state.selectedModel, state.memory, state.usage, state.favoriteModelIds, state.settings, state.initialized]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = generateUUID();

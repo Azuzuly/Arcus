@@ -48,9 +48,13 @@ export function formatTokenCost(cost: string | undefined): string {
   if (!cost) return 'Free';
   const num = parseFloat(cost);
   if (num === 0) return 'Free';
-  return `$${(num * 1_000_000).toFixed(2)} / 1M`;
+  if (num < 0.01) return `<$0.01/M`;
+  if (num < 1) return `$${num.toFixed(2)}/M`;
+  return `$${num.toFixed(0)}/M`;
 }
 
 export function formatNumber(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
   return n.toLocaleString();
 }

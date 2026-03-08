@@ -1,42 +1,38 @@
 'use client';
 
+import { useStore } from '@/lib/store';
+
 export default function AuroraBackground() {
+  const { state } = useStore();
+  const bgImage = state.settings?.backgroundImage || '';
+
+  if (bgImage) {
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        opacity: 0.3,
+      }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,5,0.3) 0%, rgba(5,5,5,0.8) 100%)' }} />
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      position: 'absolute', inset: 0, zIndex: 0, background: '#0A0A14',
-      overflow: 'hidden', pointerEvents: 'none',
-    }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
       <div style={{
-        position: 'absolute', width: '150%', height: '150%', top: '-25%', left: '-25%',
-        borderRadius: '50%', mixBlendMode: 'screen', willChange: 'transform',
-        filter: 'blur(80px)', opacity: 0.6,
-        background: 'radial-gradient(ellipse, rgba(0, 200, 150, 0.5) 0%, transparent 70%)',
-        animation: 'aurora-move-1 25s ease-in-out infinite alternate',
+        position: 'absolute', top: '-20%', left: '20%', width: '60%', height: '50%',
+        background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.08) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        animation: 'aurora 20s ease-in-out infinite',
       }} />
       <div style={{
-        position: 'absolute', width: '150%', height: '150%', top: '-25%', left: '-25%',
-        borderRadius: '50%', mixBlendMode: 'screen', willChange: 'transform',
-        filter: 'blur(80px)', opacity: 0.6,
-        background: 'radial-gradient(ellipse, rgba(100, 50, 200, 0.4) 0%, transparent 70%)',
-        animation: 'aurora-move-2 30s ease-in-out infinite alternate',
+        position: 'absolute', bottom: '10%', right: '10%', width: '40%', height: '40%',
+        background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.05) 0%, transparent 70%)',
+        filter: 'blur(100px)',
+        animation: 'aurora 25s ease-in-out infinite reverse',
       }} />
-      <div style={{
-        position: 'absolute', width: '150%', height: '150%', top: '-25%', left: '-25%',
-        borderRadius: '50%', mixBlendMode: 'screen', willChange: 'transform',
-        filter: 'blur(80px)', opacity: 0.6,
-        background: 'radial-gradient(ellipse, rgba(0, 150, 255, 0.3) 0%, transparent 70%)',
-        animation: 'aurora-move-3 20s ease-in-out infinite alternate',
-      }} />
-      {/* Pine tree silhouettes */}
-      <svg style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '200px' }} viewBox="0 0 1200 200" preserveAspectRatio="none">
-        <polygon points="50,200 100,80 150,200" fill="#060810"/>
-        <polygon points="180,200 240,50 300,200" fill="#060810"/>
-        <polygon points="350,200 390,100 430,200" fill="#060810"/>
-        <polygon points="500,200 560,30 620,200" fill="#060810"/>
-        <polygon points="680,200 720,90 760,200" fill="#060810"/>
-        <polygon points="820,200 880,60 940,200" fill="#060810"/>
-        <polygon points="1000,200 1050,110 1100,200" fill="#060810"/>
-      </svg>
     </div>
   );
 }

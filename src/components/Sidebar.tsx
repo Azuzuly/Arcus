@@ -81,7 +81,7 @@ export default function Sidebar() {
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
           {state.usage.today.requests}/{state.usage.today.limit} requests
         </div>
-        <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+        <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
           <div style={{
             height: '100%', borderRadius: 2,
             background: state.usage.today.requests / state.usage.today.limit > 0.8 ? 'var(--accent-red)' : 'var(--accent-blue)',
@@ -89,16 +89,6 @@ export default function Sidebar() {
             transition: 'width 0.3s',
           }} />
         </div>
-        {state.user.tier === 'free' && (
-          <button onClick={() => dispatch({ type: 'SHOW_MODAL', modal: 'pricing' })} style={{
-            marginTop: 8, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '6px 12px', background: 'var(--accent-red-dim)',
-            border: '1px solid var(--accent-red-border)', borderRadius: 'var(--radius-pill)',
-            color: 'var(--accent-red)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-          }}>
-            <span>♦</span> Upgrade your plan
-          </button>
-        )}
       </div>
     </aside>
   );

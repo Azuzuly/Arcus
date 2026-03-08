@@ -120,7 +120,7 @@ export default function ChatView() {
         cursor: 'pointer', transition: 'all var(--dur-fast) var(--ease-out)',
       }}>
         <span style={{ fontWeight: 500, color: '#fff', fontSize: 14 }}>{state.selectedModel.name}</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>via OpenRouter ▾</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{state.selectedModel.provider} ▾</span>
       </button>
 
       {showModelSelector && <ModelSelector onClose={() => setShowModelSelector(false)} />}
