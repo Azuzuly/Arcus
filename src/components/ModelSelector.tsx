@@ -42,11 +42,16 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
     return groups;
   }, [filteredModels, state.favoriteModelIds]);
 
-  const getCapabilities = (m: ModelInfo): string[] => {
-    const caps: string[] = [];
-    if (m.context_length) caps.push(`${Math.round(m.context_length / 1000)}K`);
-    if (m.architecture?.input_modalities?.includes('image')) caps.push('Vision');
-    if (m.architecture?.output_modalities?.includes('image')) caps.push('Image Gen');
+  const getCapabilities = (m: ModelInfo): { label: string; emoji: string }[] => {
+    const caps: { label: string; emoji: string }[] = [];
+    if (m.context_length) caps.push({ label: `${Math.round(m.context_length / 1000)}K ctx`, emoji: '📏' });
+    const inp = m.architecture?.input_modalities || [];
+    const out = m.architecture?.output_modalities || [];
+    if (inp.includes('text')) caps.push({ label: 'Text', emoji: '💬' });
+    if (inp.includes('image')) caps.push({ label: 'Vision', emoji: '👁️' });
+    if (inp.includes('audio')) caps.push({ label: 'Audio In', emoji: '🎤' });
+    if (inp.includes('video')) caps.push({ label: 'Video In', emoji: '🎥' });
+    if (out.includes('image')) caps.push({ label: 'Image Gen', emoji: '🎨' });
     return caps;
   };
 
@@ -99,8 +104,8 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{m.name}</span>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {getCapabilities(m).map(c => (
-                        <span key={c} style={{ fontSize: 10, padding: '1px 5px', background: 'var(--glass-button)', borderRadius: 4, color: 'var(--text-secondary)' }}>{c}</span>
+                      {getCapabilities(m).slice(0, 3).map(c => (
+                        <span key={c.label} style={{ fontSize: 10, padding: '1px 5px', background: 'var(--glass-button)', borderRadius: 4, color: 'var(--text-secondary)' }}>{c.emoji}</span>
                       ))}
                       <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatTokenCost(m.pricing?.prompt)}</span>
                       <button onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_FAVORITE_MODEL', modelId: m.id }); }}
@@ -159,7 +164,7 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {getCapabilities(previewModel).map(c => (
-                <span key={c} style={{ padding: '3px 10px', background: 'var(--accent-blue-glow)', border: '1px solid var(--accent-blue)', borderRadius: 'var(--radius-pill)', fontSize: 11, color: 'var(--accent-blue)' }}>{c}</span>
+                <span key={c.label} style={{ padding: '3px 10px', background: 'var(--accent-blue-glow)', border: '1px solid var(--accent-blue)', borderRadius: 'var(--radius-pill)', fontSize: 11, color: 'var(--accent-blue)' }}>{c.emoji} {c.label}</span>
               ))}
             </div>
             <button onClick={() => {

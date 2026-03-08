@@ -32,6 +32,7 @@ export interface ModelInfo {
   id: string;
   name: string;
   description?: string;
+  created?: number;
   context_length?: number;
   pricing?: {
     prompt?: string;

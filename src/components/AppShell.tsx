@@ -21,13 +21,13 @@ export default function AppShell() {
 
   // Fetch models on init
   useEffect(() => {
-    if (!state.initialized || !state.user.apiKey) return;
-    fetchModels(state.user.apiKey).then(models => {
+    if (!state.initialized) return;
+    fetchModels().then(models => {
       dispatch({ type: 'SET_ALL_MODELS', models });
     }).catch(() => {
-      showToast('Could not fetch models. Check your API key.', 'warning');
+      showToast('Could not fetch models.', 'warning');
     });
-  }, [state.initialized, state.user.apiKey, dispatch, showToast]);
+  }, [state.initialized, dispatch, showToast]);
 
   // Keyboard shortcuts
   useEffect(() => {

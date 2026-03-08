@@ -35,7 +35,7 @@ const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   topK: 0, frequencyPenalty: 0, presencePenalty: 0,
 };
 
-const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4.6', name: 'Claude Opus 4.6', provider: 'Anthropic' };
+const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic' };
 
 function initialState(): AppState {
   return {
