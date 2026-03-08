@@ -82,10 +82,11 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
 
   return (
     <div ref={panelRef} className="panel-enter" style={{
-      position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
-      width: 580, maxHeight: 440, borderRadius: 16,
-      background: 'rgba(18,18,20,0.95)', backdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+      position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 50,
+      width: 560, maxHeight: 420, borderRadius: 20,
+      background: 'rgba(12,12,14,0.85)', backdropFilter: 'blur(40px) saturate(160%)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
       display: 'flex', overflow: 'hidden',
     }}>
       {/* Left — model list */}

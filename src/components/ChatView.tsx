@@ -115,9 +115,11 @@ export default function ChatView() {
         position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 10,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
         padding: '8px 20px 8px 16px',
-        background: 'var(--glass-panel)', backdropFilter: 'blur(22px)',
-        border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)',
+        background: 'rgba(12,12,14,0.6)', backdropFilter: 'blur(40px) saturate(160%)',
+        border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-pill)',
         cursor: 'pointer', transition: 'all var(--dur-fast) var(--ease-out)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+        fontFamily: 'inherit',
       }}>
         <span style={{ fontWeight: 500, color: '#fff', fontSize: 14 }}>{state.selectedModel.name}</span>
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{state.selectedModel.provider} ▾</span>
@@ -128,13 +130,13 @@ export default function ChatView() {
       {/* Greeting */}
       {isEmpty && (
         <div style={{
-          position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -60%)',
           textAlign: 'center', zIndex: 1,
           animation: 'msgIn 600ms var(--ease-out) forwards', animationDelay: '200ms',
           opacity: 0,
         }}>
-          <h1 style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff' }}>Hello there!</h1>
-          <p style={{ fontSize: 28, fontWeight: 400, color: 'var(--text-secondary)', marginTop: 8 }}>How can I help you today?</p>
+          <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: '#fff' }}>Hello there!</h1>
+          <p style={{ fontSize: 20, fontWeight: 400, color: 'var(--text-secondary)', marginTop: 6 }}>How can I help you today?</p>
         </div>
       )}
 

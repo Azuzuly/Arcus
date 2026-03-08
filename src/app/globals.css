@@ -108,6 +108,12 @@ html, body {
   0% { background-position: -200px 0; }
   100% { background-position: 200px 0; }
 }
+@keyframes aurora {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  25% { transform: translate(5%, -8%) scale(1.05); opacity: 0.8; }
+  50% { transform: translate(-3%, 6%) scale(0.95); opacity: 1; }
+  75% { transform: translate(4%, 3%) scale(1.02); opacity: 0.85; }
+}
 @keyframes dash-move {
   to { stroke-dashoffset: -24; }
 }
