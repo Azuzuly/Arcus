@@ -1,275 +1,342 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useState, useRef, useEffect } from 'react';
-import { TabType } from '@/lib/types';
-import { insforge } from '@/lib/insforge';
+import { brandLogoUrl } from '@/lib/providerLogos';
+
+const TABS = [
+  { id: 'chat', label: 'Chat' },
+  { id: 'research', label: 'Research' },
+  { id: 'studio', label: 'Studio' },
+  { id: 'agents', label: 'Agents' },
+] as const;
+
+type Tab = typeof TABS[number]['id'];
 
 export default function TopNav() {
   const { state, dispatch } = useStore();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const activeTab = (state.activeTab as Tab) || 'chat';
+  const user = state.user;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
-    document.addEventListener('mousedown', handler);
+    if (menuOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    const syncViewport = () => setIsCompact(window.innerWidth <= 860);
-    syncViewport();
-    window.addEventListener('resize', syncViewport);
-    return () => window.removeEventListener('resize', syncViewport);
-  }, []);
-
-  useEffect(() => {
-    const el = document.querySelector('[data-main-scroll]');
-    if (!el) return;
-    const onScroll = () => setScrolled(el.scrollTop > 8);
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const tabs: { label: string; value: TabType }[] = [
-    { label: 'Home', value: 'home' },
-    { label: 'Studio', value: 'studio' },
-    { label: 'Agent', value: 'agent' },
-  ];
+  }, [menuOpen]);
 
   return (
-    <nav style={{
-      flexShrink: 0,
-      height: 64,
-      width: '100%',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      background: scrolled ? 'rgba(6,7,14,0.92)' : 'rgba(6,7,14,0.72)',
-      backdropFilter: 'blur(32px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-      borderBottom: `1px solid ${scrolled ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.05)'}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: isCompact ? '0 14px' : '0 24px',
-      transition: 'background 300ms ease, border-color 300ms ease',
-      boxShadow: scrolled ? '0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.3)' : 'none',
-    }}>
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 8 : 10, minWidth: 0 }}>
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(255,255,255,0.05)',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 15,
-            transition: 'all 120ms cubic-bezier(0.16,1,0.3,1)',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-          title="Toggle sidebar"
-        >
-          ☰
-        </button>
-
-        {/* Diamond logo glyph */}
-        <div style={{
-          width: 28,
-          height: 28,
-          borderRadius: 9,
-          background: 'linear-gradient(135deg, rgba(91,138,240,0.22) 0%, rgba(155,109,255,0.18) 100%)',
-          border: '1px solid rgba(91,138,240,0.28)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          boxShadow: '0 2px 12px rgba(91,138,240,0.2)',
-        }}>
-          <span style={{ fontSize: 14, lineHeight: 1, color: '#fff', fontWeight: 700 }}>◆</span>
-        </div>
-
-        {!isCompact && (
-          <span style={{
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 18,
-            letterSpacing: '-0.02em',
-            background: 'linear-gradient(135deg, #fff 0%, rgba(180,200,255,0.9) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            Arcus
-          </span>
-        )}
-      </div>
-
-      {/* Tab Control */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-50%)',
+    <nav
+      aria-label="Main navigation"
+      style={{
+        position: 'relative',
+        zIndex: 50,
         display: 'flex',
         alignItems: 'center',
-        background: 'rgba(14,16,24,0.82)',
-        backdropFilter: 'blur(22px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(22px) saturate(160%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 12,
-        padding: 4,
-        gap: 2,
-        maxWidth: isCompact ? '42vw' : undefined,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-      }}>
-        {tabs.map(t => (
-          <button
-            key={t.value}
-            onClick={() => dispatch({ type: 'SET_TAB', tab: t.value })}
-            style={{
-              padding: isCompact ? '6px 12px' : '6px 20px',
-              borderRadius: 8,
-              fontSize: isCompact ? 12 : 14,
-              fontWeight: 500,
-              color: state.activeTab === t.value ? '#0A0A0A' : 'var(--text-secondary)',
-              background: state.activeTab === t.value ? '#FFFFFF' : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: state.activeTab === t.value ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-              transition: 'all 150ms cubic-bezier(0.16,1,0.3,1)',
-              fontFamily: 'inherit',
-            }}
-            onMouseEnter={e => { if (state.activeTab !== t.value) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (state.activeTab !== t.value) e.currentTarget.style.color = 'var(--text-secondary)'; }}
-          >
-            {t.label}
-          </button>
-        ))}
+        justifyContent: 'space-between',
+        height: 56,
+        padding: '0 16px',
+        background: 'rgba(8,10,16,0.78)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.25)',
+        flexShrink: 0,
+      }}
+    >
+      {/* ── LEFT: Logo ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 120 }}>
+        <div style={{
+          width: 28, height: 28,
+          borderRadius: 8,
+          overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.10)',
+          boxShadow: '0 0 12px rgba(91,138,240,0.20)',
+          flexShrink: 0,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={brandLogoUrl} alt="Arcus" width={28} height={28} style={{ display: 'block' }} />
+        </div>
+        <span style={{
+          fontWeight: 700,
+          fontSize: 16,
+          letterSpacing: '-0.01em',
+          color: 'var(--text-primary)',
+        }}>Arcus</span>
       </div>
 
-      {/* User Button */}
-      <div ref={dropdownRef} style={{ position: 'relative' }}>
-        <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            borderRadius: 10,
-            transition: 'background 120ms ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          {state.settings?.profileImage ? (
-            <img src={state.settings.profileImage} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: state.user.avatarColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 12,
-              fontWeight: 600,
-              color: '#fff',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            }}>
-              {state.user.avatar}
-            </div>
-          )}
-          {!isCompact && (
-            <span style={{
-              color: 'var(--text-primary)',
-              fontSize: 14,
-              fontWeight: 500,
-              maxWidth: 120,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {state.user.username}
-            </span>
-          )}
-          {!isCompact && (
-            <span style={{ color: 'var(--text-muted)', fontSize: 11, transition: 'transform 200ms ease', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
-          )}
-        </button>
+      {/* ── CENTRE: Tab switcher ── */}
+      <div
+        role="tablist"
+        aria-label="App sections"
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          background: 'rgba(14,16,24,0.80)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '3px',
+          gap: 2,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
+        }}
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab.id })}
+              style={{
+                padding: '5px 18px',
+                borderRadius: 'calc(var(--radius-sm) - 3px)',
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? '#0a0a0f' : 'var(--text-secondary)',
+                background: isActive ? 'rgba(255,255,255,0.94)' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 160ms var(--ease-out)',
+                boxShadow: isActive ? '0 1px 6px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.60)' : 'none',
+                fontFamily: 'inherit',
+                letterSpacing: isActive ? '-0.01em' : '0',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                }
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-        {dropdownOpen && (
-          <div
-            className="panel-enter"
+      {/* ── RIGHT: User menu ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 120, justifyContent: 'flex-end' }}>
+        {user ? (
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              aria-label="User menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '5px 10px 5px 5px',
+                background: menuOpen ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${menuOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)'}`,
+                borderRadius: 'var(--radius-pill)',
+                cursor: 'pointer',
+                transition: 'all 160ms var(--ease-out)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={(e) => {
+                if (!menuOpen) {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)';
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.12)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!menuOpen) {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)';
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.07)';
+                }
+              }}
+            >
+              {/* Avatar */}
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #5B8AF0, #9B6DFF)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: '#fff',
+                boxShadow: '0 0 10px rgba(91,138,240,0.30)',
+                flexShrink: 0,
+              }}>
+                {(user.username || user.email || 'U').slice(0, 1).toUpperCase()}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.username || user.email?.split('@')[0] || 'User'}
+              </span>
+              {/* Chevron */}
+              <svg
+                width="12" height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--text-muted)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ transform: menuOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0 }}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+
+            {/* Dropdown */}
+            {menuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: 200,
+                  background: 'rgba(12,14,22,0.95)',
+                  backdropFilter: 'blur(24px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                  border: '1px solid rgba(255,255,255,0.09)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.60), 0 4px 12px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  overflow: 'hidden',
+                  animation: 'panelIn 160ms var(--ease-out) forwards',
+                  zIndex: 100,
+                }}
+              >
+                {/* User info header */}
+                <div style={{
+                  padding: '14px 16px 12px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                    {user.username || 'User'}
+                  </div>
+                  {user.email && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.email}
+                    </div>
+                  )}
+                </div>
+
+                {/* Menu items */}
+                {[
+                  { label: 'Settings', icon: '⚙', action: 'OPEN_SETTINGS' },
+                  { label: 'Keyboard shortcuts', icon: '⌨', action: 'OPEN_SHORTCUTS' },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      dispatch({ type: item.action as Parameters<typeof dispatch>[0]['type'] });
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                      transition: 'background 120ms ease, color 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                    }}
+                  >
+                    <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+
+                {/* Sign out */}
+                <button
+                  onClick={() => {
+                    dispatch({ type: 'SIGN_OUT' });
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 16px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                    transition: 'background 120ms ease, color 120ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.09)';
+                    (e.currentTarget as HTMLButtonElement).style.color = '#F87171';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>&#x2192;</span>
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => dispatch({ type: 'SHOW_ONBOARDING' })}
             style={{
-              position: 'absolute',
-              top: '100%',
-              right: 0,
-              marginTop: 8,
-              background: 'rgba(10,12,20,0.92)',
-              backdropFilter: 'blur(28px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 14,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
-              padding: 6,
-              minWidth: 190,
-              zIndex: 200,
+              padding: '7px 18px',
+              background: 'linear-gradient(135deg, #5B8AF0, #3B6EE0)',
+              border: 'none',
+              borderRadius: 'var(--radius-pill)',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              boxShadow: '0 2px 12px rgba(91,138,240,0.35)',
+              transition: 'all 150ms var(--ease-out)',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(91,138,240,0.50)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(91,138,240,0.35)';
             }}
           >
-            {[
-              { icon: '⚙', label: 'Settings', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'settings' }); setDropdownOpen(false); } },
-              { icon: '⬆', label: 'Upgrade', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'pricing' }); setDropdownOpen(false); } },
-              { icon: '✉', label: 'Feedback', action: () => { window.open('mailto:feedback@arcus.ai'); setDropdownOpen(false); } },
-              { icon: '⏻', label: 'Sign Out', action: async () => { await insforge.auth.signOut(); dispatch({ type: 'SIGN_OUT' }); window.location.reload(); } },
-            ].map((item, idx) => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  padding: '9px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  borderRadius: 9,
-                  color: item.label === 'Sign Out' ? '#FCA5A5' : 'var(--text-primary)',
-                  fontSize: 14,
-                  fontFamily: 'inherit',
-                  transition: 'background 120ms ease',
-                  marginTop: idx === 3 ? 2 : 0,
-                  borderTop: idx === 3 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                  paddingTop: idx === 3 ? 11 : 9,
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
+            Sign in
+          </button>
         )}
       </div>
     </nav>
