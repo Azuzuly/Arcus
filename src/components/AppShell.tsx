@@ -95,7 +95,7 @@ export default function AppShell() {
     }}>
       <TopNav />
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        {state.activeTab === 'home' && !state.ui.sidebarCollapsed && (
+        {(state.activeTab === 'home' || state.activeTab === 'chat' || state.activeTab === 'research') && !state.ui.sidebarCollapsed && (
           <>
             <div onClick={() => dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } })} style={{
               position: 'absolute', inset: 0, background: 'rgba(4,5,7,0.46)', backdropFilter: 'blur(8px)', zIndex: 24,
@@ -106,9 +106,9 @@ export default function AppShell() {
           </>
         )}
         <main style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'rgba(8,10,16,0.72)' }}>
-          {state.activeTab === 'home' && <ChatView />}
+          {(state.activeTab === 'home' || state.activeTab === 'chat' || state.activeTab === 'research') && <ChatView />}
           {state.activeTab === 'studio' && <StudioView />}
-          {state.activeTab === 'agent' && <AgentView />}
+          {(state.activeTab === 'agent' || state.activeTab === 'agents') && <AgentView />}
         </main>
       </div>
 

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const contentSecurityPolicy = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.puter.com;
@@ -17,6 +19,9 @@ const contentSecurityPolicy = `
 `;
 
 const nextConfig: NextConfig = {
+  // Disable 'X-Powered-By: Next.js' header (information disclosure)
+  poweredByHeader: false,
+
   async headers() {
     return [
       {
@@ -27,6 +32,14 @@ const nextConfig: NextConfig = {
             value: contentSecurityPolicy.replace(/\s{2,}/g, ' ').trim(),
           },
           {
+            // HSTS: 2 years, includeSubDomains, preload-ready
+            // In dev we set max-age=0 so local HTTP still works
+            key: 'Strict-Transport-Security',
+            value: isDev
+              ? 'max-age=0'
+              : 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
@@ -35,12 +48,27 @@ const nextConfig: NextConfig = {
             value: 'nosniff',
           },
           {
+            // DENY prevents any framing, including same-origin (stronger than SAMEORIGIN)
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'DENY',
+          },
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
           },
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(self), geolocation=(self), browsing-topics=()',
+          },
+          {
+            // Prevent cross-origin popups from retaining a reference to this window
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+          {
+            // Prevent this origin's resources being embedded cross-origin
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'same-origin',
           },
         ],
       },

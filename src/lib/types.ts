@@ -355,7 +355,7 @@ export interface PersonalizationSettings {
   compactChatSpacing: boolean;
 }
 
-export type TabType = 'home' | 'studio' | 'agent';
+export type TabType = 'home' | 'chat' | 'studio' | 'research' | 'agent' | 'agents';
 export type ModalType = 'settings' | 'pricing' | 'rename' | 'delete' | 'model-selector' | 'personalization' | null;
 export type SettingsSection = 'account' | 'appearance' | 'personalization' | 'chat' | 'memory' | 'usage' | 'about';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';

@@ -1,129 +1,259 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useState, useRef, useEffect } from 'react';
-import { TabType } from '@/lib/types';
-import { insforge } from '@/lib/insforge';
+
+const TABS = [
+  { id: 'chat', label: 'Chat' },
+  { id: 'research', label: 'Research' },
+  { id: 'studio', label: 'Studio' },
+  { id: 'agents', label: 'Agents' },
+] as const;
+
+type Tab = typeof TABS[number]['id'];
 
 export default function TopNav() {
   const { state, dispatch } = useStore();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const activeTab = (state.activeTab as Tab) || 'chat';
+  const user = state.user;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
 
+  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
-    document.addEventListener('mousedown', handler);
+    if (menuOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [menuOpen]);
 
+  // Scroll-aware nav
   useEffect(() => {
-    const syncViewport = () => setIsCompact(window.innerWidth <= 640);
-    syncViewport();
-    window.addEventListener('resize', syncViewport);
-    return () => window.removeEventListener('resize', syncViewport);
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const tabs: { label: string; value: TabType }[] = [
-    { label: 'Home', value: 'home' },
-    { label: 'Studio', value: 'studio' },
-    { label: 'Agent', value: 'agent' },
-  ];
 
   return (
-    <div style={{
-      position: 'fixed', top: 18, left: 18, right: 18, zIndex: 90,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      pointerEvents: 'none',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, maxWidth: 'calc(100vw - 190px)', pointerEvents: 'auto', flexWrap: 'nowrap' }}>
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-          style={{
-            width: 40, height: 40, borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.14)', color: 'var(--text-primary)', cursor: 'pointer',
-            backdropFilter: 'blur(24px) saturate(180%)', boxShadow: '0 12px 28px rgba(0,0,0,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
-          }}
-          title="Toggle sidebar"
-        >
-          ☰
-        </button>
-
+    <nav
+      aria-label="Main navigation"
+      style={{
+        position: 'relative',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: 56,
+        padding: '0 16px',
+        background: scrolled ? 'rgba(6,7,14,0.92)' : 'rgba(8,10,16,0.78)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.25)',
+        flexShrink: 0,
+        transition: 'background 200ms ease, border-color 200ms ease',
+      }}
+    >
+      {/* ── LEFT: Logo ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 120 }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(28px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20,
-          padding: 5, boxShadow: '0 14px 36px rgba(0,0,0,0.2)', marginLeft: isCompact ? 2 : 8,
-          overflowX: 'auto',
+          width: 28, height: 28,
+          borderRadius: 9,
+          background: 'linear-gradient(135deg,rgba(91,138,240,0.22),rgba(155,109,255,0.18))',
+          border: '1px solid rgba(91,138,240,0.28)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 12px rgba(91,138,240,0.2)',
+          flexShrink: 0,
         }}>
-          {tabs.map(t => (
-            <button key={t.value} onClick={() => dispatch({ type: 'SET_TAB', tab: t.value })} style={{
-              padding: isCompact ? '8px 12px' : '8px 16px', borderRadius: 16, fontSize: isCompact ? 12 : 13, fontWeight: 600,
-              color: state.activeTab === t.value ? '#08111c' : 'rgba(255,255,255,0.74)',
-              background: state.activeTab === t.value ? 'rgba(255,255,255,0.88)' : 'transparent',
-              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              boxShadow: state.activeTab === t.value ? '0 8px 24px rgba(255,255,255,0.18)' : 'none',
-              transition: 'all var(--dur-fast) var(--ease-out)',
-            }}>
-              {t.label}
-            </button>
-          ))}
+          <span style={{ fontSize: 14, lineHeight: 1, color: '#fff', fontWeight: 700 }}>◆</span>
         </div>
+        <span style={{
+          fontWeight: 700,
+          fontSize: 16,
+          letterSpacing: '-0.01em',
+          background: 'linear-gradient(90deg, var(--text-primary) 0%, var(--accent-blue) 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>Arcus</span>
       </div>
 
-      <div ref={dropdownRef} style={{ position: 'relative', pointerEvents: 'auto' }}>
-        <button onClick={() => setDropdownOpen(!dropdownOpen)} style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(28px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', padding: isCompact ? '8px' : '8px 10px', borderRadius: 18,
-          boxShadow: '0 14px 36px rgba(0,0,0,0.2)',
-        }}>
-          {state.settings?.profileImage ? (
-            <img src={state.settings.profileImage} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%', background: state.user.avatarColor,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 600, color: '#fff',
-            }}>
-              {state.user.avatar}
-            </div>
-          )}
-          {!isCompact && <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{state.user.username}</span>}
-          {!isCompact && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>▾</span>}
+      {/* ── CENTRE: Tab switcher ── */}
+      <div
+        role="tablist"
+        aria-label="App sections"
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          background: 'rgba(14,16,24,0.80)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '3px',
+          gap: 2,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+        }}
+      >
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id })}
+            style={{
+              padding: '5px 14px',
+              borderRadius: 'var(--radius-xs)',
+              border: 'none',
+              background: activeTab === tab.id
+                ? 'rgba(91,138,240,0.18)'
+                : 'transparent',
+              color: activeTab === tab.id
+                ? 'var(--text-primary)'
+                : 'var(--text-muted)',
+              fontSize: 13,
+              fontWeight: activeTab === tab.id ? 600 : 400,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'all 150ms ease',
+              whiteSpace: 'nowrap',
+              boxShadow: activeTab === tab.id
+                ? 'inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 6px rgba(91,138,240,0.15)'
+                : 'none',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── RIGHT: User menu ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 120, justifyContent: 'flex-end' }} ref={menuRef}>
+        <button
+          aria-label="Open user menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '5px 8px',
+            background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: '1px solid',
+            borderColor: menuOpen ? 'rgba(255,255,255,0.12)' : 'transparent',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => {
+            if (!menuOpen) {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)';
+            }
+          }}
+          onMouseLeave={e => {
+            if (!menuOpen) {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+            }
+          }}
+        >
+          {/* Avatar */}
+          <div style={{
+            width: 26, height: 26,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(91,138,240,0.4), rgba(155,109,255,0.3))',
+            border: '1px solid rgba(91,138,240,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 700, color: 'var(--text-primary)',
+            flexShrink: 0,
+            overflow: 'hidden',
+          }}>
+            {user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatar} alt="" width={26} height={26} style={{ display: 'block' }} />
+            ) : (
+              <span>{user?.email?.[0]?.toUpperCase() ?? user?.username?.[0]?.toUpperCase() ?? '?'}</span>
+            )}
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user?.username ?? user?.email ?? 'Account'}
+          </span>
+          {/* Chevron */}
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+            style={{ color: 'var(--text-muted)', transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms ease', flexShrink: 0 }}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </button>
 
-        {dropdownOpen && (
-          <div className="panel-enter" style={{
-            position: 'absolute', top: '100%', right: 0, marginTop: 8,
-            background: 'rgba(18,22,30,0.92)', backdropFilter: 'blur(26px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18,
-            boxShadow: '0 18px 44px rgba(0,0,0,0.26)', padding: 6, minWidth: 190, zIndex: 200,
+        {/* Dropdown */}
+        {menuOpen && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 6px)', right: 16,
+            minWidth: 200,
+            background: 'rgba(14,16,26,0.94)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+            padding: '6px',
+            zIndex: 100,
+            animation: 'fadeIn 140ms ease',
           }}>
-            {[
-              { icon: '⚙', label: 'Settings', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'settings' }); setDropdownOpen(false); } },
-              { icon: '⬆', label: 'Upgrade', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'pricing' }); setDropdownOpen(false); } },
-              { icon: '✉', label: 'Feedback', action: () => { window.open('mailto:feedback@arcus.ai'); setDropdownOpen(false); } },
-              { icon: '⏻', label: 'Sign Out', action: async () => { await insforge.auth.signOut(); dispatch({ type: 'SIGN_OUT' }); window.location.reload(); } },
-            ].map(item => (
-              <button key={item.label} onClick={item.action} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px',
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                borderRadius: 12, color: 'var(--text-primary)', fontSize: 14,
-                fontFamily: 'inherit', transition: 'background var(--dur-fast) var(--ease-out)',
-              }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-hover)')}
-                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
+            {/* User info header */}
+            <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.username ?? 'User'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.email}
+              </div>
+            </div>
+
+            {[{ label: 'Settings', modal: 'settings' as const }, { label: 'Billing', modal: 'pricing' as const }].map(item => (
+              <button
+                key={item.label}
+                onClick={() => { dispatch({ type: 'SHOW_MODAL', modal: item.modal }); setMenuOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 10px', borderRadius: 'var(--radius-xs)',
+                  background: 'transparent', border: 'none',
+                  color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
+                  fontFamily: 'inherit', transition: 'all 120ms ease', textAlign: 'left',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                {item.label}
               </button>
             ))}
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 4, paddingTop: 4 }}>
+              <button
+                onClick={() => { dispatch({ type: 'SIGN_OUT' }); setMenuOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 10px', borderRadius: 'var(--radius-xs)',
+                  background: 'transparent', border: 'none',
+                  color: 'var(--accent-red, #F87171)', fontSize: 13, cursor: 'pointer',
+                  fontFamily: 'inherit', transition: 'all 120ms ease', textAlign: 'left',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Sign out
+              </button>
+            </div>
           </div>
         )}
       </div>
-    </div>
+    </nav>
   );
 }
