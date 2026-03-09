@@ -26,11 +26,9 @@ export async function POST(request: NextRequest) {
         { status: error.statusCode }
       );
     }
+    // Do not leak internal error details to clients
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : 'Search request failed.',
-      },
+      { error: 'Search request failed. Please try again.' },
       { status: 500 }
     );
   }
