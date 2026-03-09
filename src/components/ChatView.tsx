@@ -380,15 +380,33 @@ export default function ChatView() {
       {isEmpty && (
         <div style={{
           position: 'absolute', inset: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           paddingTop: emptyHeroPaddingTop, paddingBottom: 210, paddingInline: 20,
           textAlign: 'center', zIndex: 1,
           animation: 'msgIn 600ms var(--ease-out) forwards', animationDelay: '200ms',
           opacity: 0,
         }}>
           <div style={{ maxWidth: 860, width: '100%' }}>
-            <h1 style={{ fontSize: 'clamp(24px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#fff' }}>Your AI workspace is awake.</h1>
-            <p style={{ fontSize: 'clamp(15px, 2vw, 19px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 8 }}>Chat, research the live web, and create in Arcus with a crisp night-sky feel.</p>
+            {/* Diamond accent */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 48, height: 48, borderRadius: 16, marginBottom: 20,
+              background: 'linear-gradient(135deg, rgba(91,138,240,0.18), rgba(155,109,255,0.14))',
+              border: '1px solid rgba(91,138,240,0.25)',
+              boxShadow: '0 4px 24px rgba(91,138,240,0.18)',
+              fontSize: 22,
+            }}>◆</div>
+            <h1 style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text-primary)', lineHeight: 1.15, margin: 0 }}>
+              {(() => {
+                const h = new Date().getHours();
+                const name = state.user?.name?.split(' ')[0];
+                const time = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+                return name ? `${time}, ${name}.` : `${time}.`;
+              })()}
+            </h1>
+            <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6, maxWidth: 520, margin: '10px auto 0' }}>
+              What would you like to explore today?
+            </p>
           </div>
         </div>
       )}
