@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import "./globals.css";
@@ -18,19 +19,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: 'Arcus',
-    template: '%s — Arcus',
+    template: '%s \u2014 Arcus',
   },
   description: 'Your intelligent AI workspace. Chat with 500+ models, generate images, build AI workflows.',
   keywords: ['AI', 'chat', 'GPT', 'Claude', 'Gemini', 'AI workspace', 'liquid glass', 'Arcus'],
   authors: [{ name: 'Arcus' }],
   openGraph: {
-    title: 'Arcus — AI Workspace',
+    title: 'Arcus \u2014 AI Workspace',
     description: 'Chat with 500+ AI models, generate images, and build intelligent workflows.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Arcus — AI Workspace',
+    title: 'Arcus \u2014 AI Workspace',
     description: 'Chat with 500+ AI models, generate images, and build intelligent workflows.',
   },
   robots: {
@@ -45,7 +46,7 @@ export const viewport: Viewport = {
   themeColor: '#050508',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
