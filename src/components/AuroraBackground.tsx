@@ -14,87 +14,158 @@ export default function AuroraBackground() {
           position: 'absolute', inset: 0,
           backgroundImage: `url(${bgImage})`,
           backgroundSize: 'cover', backgroundPosition: 'center',
-          opacity: 0.25,
+          opacity: 0.18,
         }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,5,0.3) 0%, rgba(5,5,5,0.85) 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,6,10,0.40) 0%, rgba(5,6,10,0.90) 100%)' }} />
         </div>
       )}
 
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(180deg, #0b1020 0%, #090c16 38%, #07090f 100%)',
-      }} />
-
-      <div style={{
-        position: 'absolute', top: 34, left: '50%', transform: 'translateX(-50%)',
-        width: 2, height: 2, borderRadius: '50%', background: 'rgba(255,255,255,0.95)',
-        boxShadow: '-340px 42px 0 1px rgba(255,255,255,0.52), -268px 16px 0 0 rgba(255,255,255,0.36), -180px 76px 0 1px rgba(255,255,255,0.5), -84px 30px 0 0 rgba(255,255,255,0.72), 95px 56px 0 1px rgba(255,255,255,0.58), 184px 18px 0 0 rgba(255,255,255,0.40), 296px 68px 0 1px rgba(255,255,255,0.48), 360px 26px 0 0 rgba(255,255,255,0.38)',
-        opacity: 0.88,
-      }} />
-
-      <div style={{
-        position: 'absolute', top: 110, left: '50%', transform: 'translateX(-50%) rotate(45deg)',
-        width: 12, height: 12, border: '1px solid rgba(186, 215, 255, 0.85)',
-        boxShadow: '0 0 24px rgba(123, 170, 255, 0.2)', opacity: 0.6,
-      }} />
-
-      <div style={{
-        position: 'absolute', top: '-15%', left: '15%', width: '45%', height: '45%',
-        background: 'radial-gradient(ellipse at center, rgba(63,95,172,0.18) 0%, rgba(40,82,136,0.08) 44%, transparent 72%)',
-        filter: 'blur(56px)',
-        animation: 'aurora 16s ease-in-out infinite',
-        borderRadius: '50%',
-      }} />
-      <div style={{
-        position: 'absolute', top: '10%', right: '5%', width: '35%', height: '40%',
-        background: 'radial-gradient(ellipse at center, rgba(87,110,180,0.14) 0%, rgba(35,52,96,0.08) 42%, transparent 72%)',
-        filter: 'blur(64px)',
-        animation: 'aurora 18s ease-in-out infinite reverse',
-        borderRadius: '50%',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '0%', left: '25%', width: '50%', height: '35%',
-        background: 'radial-gradient(ellipse at center, rgba(61,133,167,0.11) 0%, rgba(17,44,58,0.06) 42%, transparent 72%)',
-        filter: 'blur(72px)',
-        animation: 'aurora 20s ease-in-out infinite',
-        borderRadius: '50%',
-      }} />
-
-      <div style={{
-        position: 'absolute', left: '-6%', right: '-6%', bottom: 110, height: 170,
-        background: 'radial-gradient(ellipse at 50% 100%, rgba(19,34,54,0.84) 0%, rgba(10,15,25,0.98) 70%)',
-        borderTopLeftRadius: '50% 100%', borderTopRightRadius: '50% 100%',
-      }} />
-      <div style={{
-        position: 'absolute', left: '-8%', right: '-8%', bottom: 48, height: 160,
-        background: 'radial-gradient(ellipse at 50% 100%, rgba(10,18,30,0.96) 0%, rgba(7,10,16,1) 72%)',
-        borderTopLeftRadius: '45% 100%', borderTopRightRadius: '45% 100%',
-      }} />
-
-      <div style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, height: 160,
-        background: 'linear-gradient(180deg, rgba(4,7,12,0) 0%, rgba(4,7,12,0.92) 28%, #05070c 100%)',
-      }} />
-
-      <svg viewBox="0 0 1440 220" preserveAspectRatio="none" style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: 160, opacity: 0.92,
-      }}>
-        <path d="M0 220 L0 132 L60 144 L96 104 L136 142 L178 82 L224 150 L280 98 L330 148 L378 88 L430 150 L500 94 L556 138 L622 84 L694 146 L760 92 L826 156 L902 98 L974 144 L1032 96 L1094 150 L1162 86 L1224 150 L1298 112 L1360 156 L1440 132 L1440 220 Z" fill="#04060a" />
-      </svg>
-
-      {/* Glass reflection overlay */}
+      {/* Deep void base */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 28%, transparent 78%, rgba(255,255,255,0.015) 100%)',
+        background: 'linear-gradient(180deg, #080a14 0%, #060810 45%, #050709 100%)',
+      }} />
+
+      {/* === AURORA LAYERS === */}
+
+      {/* Primary: top-left blue-indigo nebula */}
+      <div style={{
+        position: 'absolute',
+        top: '-22%', left: '-8%',
+        width: '58%', height: '60%',
+        background: 'radial-gradient(ellipse at center, rgba(55,85,195,0.18) 0%, rgba(38,62,148,0.09) 42%, transparent 70%)',
+        filter: 'blur(56px)',
+        animation: 'aurora 18s ease-in-out infinite',
+        borderRadius: '50%',
+        willChange: 'transform',
+      }} />
+
+      {/* Secondary: top-right violet */}
+      <div style={{
+        position: 'absolute',
+        top: '-8%', right: '-4%',
+        width: '48%', height: '52%',
+        background: 'radial-gradient(ellipse at center, rgba(88,55,185,0.14) 0%, rgba(60,35,130,0.07) 44%, transparent 72%)',
+        filter: 'blur(72px)',
+        animation: 'aurora 22s ease-in-out infinite reverse',
+        borderRadius: '50%',
+        willChange: 'transform',
+      }} />
+
+      {/* Tertiary: bottom centre teal */}
+      <div style={{
+        position: 'absolute',
+        bottom: '-5%', left: '22%',
+        width: '55%', height: '45%',
+        background: 'radial-gradient(ellipse at center, rgba(48,110,160,0.11) 0%, rgba(18,48,64,0.06) 44%, transparent 72%)',
+        filter: 'blur(64px)',
+        animation: 'aurora 26s ease-in-out infinite',
+        borderRadius: '50%',
+        willChange: 'transform',
+      }} />
+
+      {/* Quaternary: mid-right ambient */}
+      <div style={{
+        position: 'absolute',
+        top: '30%', right: '-6%',
+        width: '38%', height: '42%',
+        background: 'radial-gradient(ellipse at center, rgba(70,45,160,0.09) 0%, transparent 68%)',
+        filter: 'blur(80px)',
+        animation: 'aurora 20s ease-in-out infinite 4s',
+        borderRadius: '50%',
+        willChange: 'transform',
+      }} />
+
+      {/* === HORIZON GLOW BAND === */}
+      <div style={{
+        position: 'absolute',
+        left: '-8%', right: '-8%', bottom: 80,
+        height: 160,
+        background: 'radial-gradient(ellipse 80% 100% at 50% 100%, rgba(72,98,210,0.10) 0%, transparent 70%)',
+        filter: 'blur(24px)',
+      }} />
+
+      {/* === STAR FIELD === */}
+      {/* Layer 1: sparse large stars */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.85) 1px, transparent 1px)',
+        backgroundSize: '320px 320px',
+        backgroundPosition: '0 0',
+        opacity: 0.22,
+      }} />
+      {/* Layer 2: mid stars */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.65) 1px, transparent 1px)',
+        backgroundSize: '180px 180px',
+        backgroundPosition: '90px 72px',
+        opacity: 0.18,
+      }} />
+      {/* Layer 3: dense micro stars */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.45) 1px, transparent 1px)',
+        backgroundSize: '90px 90px',
+        backgroundPosition: '42px 36px',
+        opacity: 0.12,
+      }} />
+
+      {/* === TOP DECORATIVE CONSTELLATION === */}
+      {/* Centre star */}
+      <div style={{
+        position: 'absolute', top: 28, left: '50%',
+        transform: 'translateX(-50%)',
+        width: 3, height: 3, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.92)',
+        boxShadow: [
+          '-340px 42px 0 1px rgba(255,255,255,0.50)',
+          '-268px 16px 0 0 rgba(255,255,255,0.34)',
+          '-180px 76px 0 1px rgba(255,255,255,0.48)',
+          '-84px 30px 0 0 rgba(255,255,255,0.70)',
+          '95px 56px 0 1px rgba(255,255,255,0.54)',
+          '184px 18px 0 0 rgba(255,255,255,0.38)',
+          '296px 68px 0 1px rgba(255,255,255,0.46)',
+          '360px 26px 0 0 rgba(255,255,255,0.36)',
+        ].join(', '),
+        opacity: 0.86,
+      }} />
+
+      {/* Diamond accent */}
+      <div style={{
+        position: 'absolute', top: 104, left: '50%',
+        transform: 'translateX(-50%) rotate(45deg)',
+        width: 11, height: 11,
+        border: '1px solid rgba(186,215,255,0.80)',
+        boxShadow: '0 0 20px rgba(120,168,255,0.18)',
+        opacity: 0.55,
+      }} />
+
+      {/* === VIGNETTE === */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(5,6,10,0.50) 100%)',
         pointerEvents: 'none',
       }} />
 
-      {/* Subtle noise texture */}
+      {/* === BOTTOM FADE === */}
       <div style={{
-        position: 'absolute', inset: 0, opacity: 0.03,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '25%',
+        background: 'linear-gradient(to top, rgba(6,8,12,0.92) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* === SUBTLE GRID OVERLAY === */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)
+        `,
+        backgroundSize: '80px 80px',
+        opacity: 0.6,
+        maskImage: 'radial-gradient(ellipse 90% 80% at 50% 0%, black 30%, transparent 100%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 50% 0%, black 30%, transparent 100%)',
         pointerEvents: 'none',
       }} />
     </div>
