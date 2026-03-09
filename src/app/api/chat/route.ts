@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function buildOpenRouterPayload(body: Record<string, unknown>) {
-  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const messages = Array.isArray(body.messages) ? body.messages.map((msg: Record<string, unknown>) => {
+    const role = typeof msg.role === 'string' ? msg.role : 'user';
+    // Pass through multimodal content blocks (vision) as-is
+    if (Array.isArray(msg.content)) {
+      return { role, content: msg.content };
+    }
+    return { role, content: typeof msg.content === 'string' ? msg.content : '' };
+  }) : [];
   const options = typeof body.options === 'object' && body.options ? body.options as Record<string, unknown> : {};
   const model = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : 'anthropic/claude-sonnet-4.5';
 

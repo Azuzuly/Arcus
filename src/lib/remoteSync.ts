@@ -1,5 +1,6 @@
 import { Conversation, Message, SelectedModel, ChatSettings } from './types';
 import { insforge } from './insforge';
+import { ROUTER_SELECTED_MODEL } from './modelRouter';
 
 interface ConversationRow {
   id: string;
@@ -18,6 +19,8 @@ interface MessageRow {
   created_at: string;
 }
 
+const blockedRemoteSyncUsers = new Set<string>();
+
 function isMissingSyncSchemaError(error: unknown): boolean {
   const message = error instanceof Error
     ? error.message
@@ -26,6 +29,33 @@ function isMissingSyncSchemaError(error: unknown): boolean {
       : '';
 
   return /relation .* does not exist|table .* does not exist|conversations|messages/i.test(message);
+}
+
+function isUnauthorizedSyncError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error && 'message' in error
+      ? String((error as { message?: unknown }).message || '')
+      : '';
+
+  return /401|403|unauthori[sz]ed|forbidden|jwt|token|auth/i.test(message);
+}
+
+function shouldSkipRemoteSync(userId: string): boolean {
+  return blockedRemoteSyncUsers.has(userId);
+}
+
+function blockRemoteSync(userId: string): void {
+  blockedRemoteSyncUsers.add(userId);
+}
+
+export function resetRemoteSyncAuthState(userId?: string): void {
+  if (!userId) {
+    blockedRemoteSyncUsers.clear();
+    return;
+  }
+
+  blockedRemoteSyncUsers.delete(userId);
 }
 
 function toTimestamp(value: string | null | undefined, fallback: number): number {
@@ -39,7 +69,7 @@ function serializeModel(model: SelectedModel): string {
 
 function deserializeModel(value: string | null | undefined): SelectedModel {
   if (!value) {
-    return { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', runtime: 'puter' };
+    return ROUTER_SELECTED_MODEL;
   }
 
   try {
@@ -60,6 +90,8 @@ function deserializeModel(value: string | null | undefined): SelectedModel {
 }
 
 export async function fetchRemoteConversations(userId: string, defaultSettings: ChatSettings): Promise<Conversation[]> {
+  if (shouldSkipRemoteSync(userId)) return [];
+
   const { data: conversations, error } = await insforge.database
     .from('conversations')
     .select('id,user_id,title,model,created_at,updated_at')
@@ -68,6 +100,10 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
 
   if (error) {
     if (isMissingSyncSchemaError(error)) return [];
+    if (isUnauthorizedSyncError(error)) {
+      blockRemoteSync(userId);
+      return [];
+    }
     throw error;
   }
 
@@ -83,6 +119,10 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
 
   if (messagesError) {
     if (isMissingSyncSchemaError(messagesError)) return [];
+    if (isUnauthorizedSyncError(messagesError)) {
+      blockRemoteSync(userId);
+      return [];
+    }
     throw messagesError;
   }
 
@@ -114,6 +154,8 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
 }
 
 export async function syncRemoteConversations(userId: string, conversations: Conversation[]): Promise<void> {
+  if (shouldSkipRemoteSync(userId)) return;
+
   const safeConversations = conversations.map(conversation => ({
     ...conversation,
     messages: conversation.messages.filter(message => !message.isStreaming),
@@ -126,6 +168,10 @@ export async function syncRemoteConversations(userId: string, conversations: Con
 
   if (existingError) {
     if (isMissingSyncSchemaError(existingError)) return;
+    if (isUnauthorizedSyncError(existingError)) {
+      blockRemoteSync(userId);
+      return;
+    }
     throw existingError;
   }
 
@@ -135,10 +181,22 @@ export async function syncRemoteConversations(userId: string, conversations: Con
 
   if (remoteOnlyIds.length > 0) {
     const { error: deleteRemoteMessagesError } = await insforge.database.from('messages').delete().in('conversation_id', remoteOnlyIds);
-    if (deleteRemoteMessagesError && !isMissingSyncSchemaError(deleteRemoteMessagesError)) throw deleteRemoteMessagesError;
+    if (deleteRemoteMessagesError && !isMissingSyncSchemaError(deleteRemoteMessagesError)) {
+      if (isUnauthorizedSyncError(deleteRemoteMessagesError)) {
+        blockRemoteSync(userId);
+        return;
+      }
+      throw deleteRemoteMessagesError;
+    }
 
     const { error: deleteRemoteConversationsError } = await insforge.database.from('conversations').delete().in('id', remoteOnlyIds);
-    if (deleteRemoteConversationsError && !isMissingSyncSchemaError(deleteRemoteConversationsError)) throw deleteRemoteConversationsError;
+    if (deleteRemoteConversationsError && !isMissingSyncSchemaError(deleteRemoteConversationsError)) {
+      if (isUnauthorizedSyncError(deleteRemoteConversationsError)) {
+        blockRemoteSync(userId);
+        return;
+      }
+      throw deleteRemoteConversationsError;
+    }
   }
 
   for (const conversation of safeConversations) {
@@ -164,12 +222,20 @@ export async function syncRemoteConversations(userId: string, conversations: Con
 
       if (error) {
         if (isMissingSyncSchemaError(error)) return;
+        if (isUnauthorizedSyncError(error)) {
+          blockRemoteSync(userId);
+          return;
+        }
         throw error;
       }
     } else {
       const { error } = await insforge.database.from('conversations').insert(payload);
       if (error) {
         if (isMissingSyncSchemaError(error)) return;
+        if (isUnauthorizedSyncError(error)) {
+          blockRemoteSync(userId);
+          return;
+        }
         throw error;
       }
     }
@@ -181,6 +247,10 @@ export async function syncRemoteConversations(userId: string, conversations: Con
 
     if (deleteMessagesError) {
       if (isMissingSyncSchemaError(deleteMessagesError)) return;
+      if (isUnauthorizedSyncError(deleteMessagesError)) {
+        blockRemoteSync(userId);
+        return;
+      }
       throw deleteMessagesError;
     }
 
@@ -196,6 +266,10 @@ export async function syncRemoteConversations(userId: string, conversations: Con
       const { error: insertMessagesError } = await insforge.database.from('messages').insert(messagePayload);
       if (insertMessagesError) {
         if (isMissingSyncSchemaError(insertMessagesError)) return;
+        if (isUnauthorizedSyncError(insertMessagesError)) {
+          blockRemoteSync(userId);
+          return;
+        }
         throw insertMessagesError;
       }
     }

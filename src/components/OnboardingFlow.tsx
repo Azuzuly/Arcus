@@ -4,19 +4,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { mapInsforgeUserToStateUser, normalizeUsernameBase } from '@/lib/auth';
-import { insforge } from '@/lib/insforge';
+import { insforge, persistInsforgeSessionLocally } from '@/lib/insforge';
 import { brandLogoUrl } from '@/lib/providerLogos';
 
 type AuthMode = 'signup' | 'signin' | 'verify';
 type AuthMethod = 'password' | 'google' | 'github';
 
 const LAST_AUTH_METHOD_KEY = 'arcus_last_auth_method';
+const PENDING_AUTH_METHOD_KEY = 'arcus_pending_auth_method';
 
 const featurePoints = [
   'Create a unique Arcus identity with synced conversations and preferences.',
   'Jump between research, chat, studio, and agents without losing context.',
   'Use one polished workspace with branded models, uploads, and deep research controls.',
 ];
+
+function normalizeAuthErrorMessage(message: string | undefined, fallback: string) {
+  const resolved = (message || fallback).trim();
+
+  if (/failed to fetch|networkerror|blocked_by_client|load resource/i.test(resolved)) {
+    return 'Arcus could not reach authentication. If you use an ad blocker or privacy extension, allow *.insforge.app and try again.';
+  }
+
+  return resolved || fallback;
+}
 
 function GoogleIcon() {
   return (
@@ -37,10 +48,18 @@ function GitHubIcon() {
   );
 }
 
-export default function OnboardingFlow() {
+export default function OnboardingFlow({
+  initialMode = 'signup',
+  defaultStep = 1,
+  onClose,
+}: {
+  initialMode?: Exclude<AuthMode, 'verify'>;
+  defaultStep?: 1 | 2;
+  onClose?: () => void;
+}) {
   const { dispatch, showToast } = useStore();
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<AuthMode>('signup');
+  const [step, setStep] = useState(defaultStep);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +75,15 @@ export default function OnboardingFlow() {
   const usernamePreview = useMemo(() => normalizeUsernameBase(username), [username]);
 
   useEffect(() => {
+    setStep(defaultStep);
+  }, [defaultStep]);
+
+  useEffect(() => {
+    setMode(initialMode);
+    setError('');
+  }, [initialMode]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const syncViewport = () => setIsWide(window.innerWidth >= 920);
@@ -68,7 +96,13 @@ export default function OnboardingFlow() {
     setLastAuthMethod(method);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(LAST_AUTH_METHOD_KEY, method);
+      window.sessionStorage.removeItem(PENDING_AUTH_METHOD_KEY);
     }
+  };
+
+  const queueAuthMethod = (method: Exclude<AuthMethod, 'password'>) => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(PENDING_AUTH_METHOD_KEY, method);
   };
 
   const sendVerificationCode = async (targetEmail: string) => {
@@ -84,13 +118,28 @@ export default function OnboardingFlow() {
     method: AuthMethod = 'password'
   ) => {
     const normalized = normalizeUsernameBase(preferredName || username || String(userLike.profile?.name || 'arcus'));
-    await insforge.auth.setProfile({
+    const { error: profileError, data: profileData } = await insforge.auth.setProfile({
       name: normalized,
       username: normalized,
       preferred_name: normalized,
     });
-    dispatch({ type: 'SET_USER', user: mapInsforgeUserToStateUser({ ...userLike, profile: { ...(userLike.profile || {}), username: normalized, name: normalized } }) });
+
+    const mergedProfile = {
+      ...(userLike.profile || {}),
+      ...(profileData?.profile && typeof profileData.profile === 'object' ? profileData.profile : {}),
+      username: normalized,
+      name: normalized,
+    };
+
+    dispatch({ type: 'SET_USER', user: mapInsforgeUserToStateUser({ ...userLike, profile: mergedProfile }) });
+    persistInsforgeSessionLocally();
     rememberAuthMethod(method);
+
+    if (profileError) {
+      showToast('You are signed in. Arcus could not sync your profile name yet, but the workspace is ready.', 'warning');
+      return;
+    }
+
     showToast('Welcome to Arcus', 'success');
   };
 
@@ -105,7 +154,7 @@ export default function OnboardingFlow() {
     });
     setLoading(false);
     if (signUpError) {
-      setError(signUpError.message || 'Could not create account');
+      setError(normalizeAuthErrorMessage(signUpError.message, 'Could not create account'));
       return;
     }
     if (data?.requireEmailVerification) {
@@ -114,7 +163,7 @@ export default function OnboardingFlow() {
       } catch (verificationError) {
         setLoading(false);
         setMode('verify');
-        setError(verificationError instanceof Error ? verificationError.message : 'Account created, but Arcus could not send the verification code automatically.');
+        setError(normalizeAuthErrorMessage(verificationError instanceof Error ? verificationError.message : undefined, 'Account created, but Arcus could not send the verification code automatically.'));
         return;
       }
       setMode('verify');
@@ -143,15 +192,16 @@ export default function OnboardingFlow() {
           await sendVerificationCode(email);
           showToast('Verify your email to finish signing in. We sent a fresh 6-digit code.', 'info');
         } catch (verificationError) {
-          setError(verificationError instanceof Error ? verificationError.message : 'Please verify your email before signing in.');
+          setError(normalizeAuthErrorMessage(verificationError instanceof Error ? verificationError.message : undefined, 'Please verify your email before signing in.'));
           return;
         }
         return;
       }
-      setError(signInError?.message || 'Could not sign in');
+      setError(normalizeAuthErrorMessage(signInError?.message, 'Could not sign in'));
       return;
     }
     dispatch({ type: 'SET_USER', user: mapInsforgeUserToStateUser(data.user) });
+    persistInsforgeSessionLocally();
     rememberAuthMethod('password');
     showToast('Signed in', 'success');
   };
@@ -162,7 +212,7 @@ export default function OnboardingFlow() {
     const { data, error: verifyError } = await insforge.auth.verifyEmail({ email: email.trim(), otp: otp.trim() });
     setLoading(false);
     if (verifyError || !data?.user) {
-      setError(verifyError?.message || 'Could not verify your email');
+      setError(normalizeAuthErrorMessage(verifyError?.message, 'Could not verify your email'));
       return;
     }
     await completeAuth(data.user, username, 'password');
@@ -180,7 +230,7 @@ export default function OnboardingFlow() {
       await sendVerificationCode(email);
       showToast('Fresh verification code sent.', 'success');
     } catch (verificationError) {
-      setError(verificationError instanceof Error ? verificationError.message : 'Could not resend the verification code.');
+      setError(normalizeAuthErrorMessage(verificationError instanceof Error ? verificationError.message : undefined, 'Could not resend the verification code.'));
     } finally {
       setLoading(false);
     }
@@ -189,16 +239,33 @@ export default function OnboardingFlow() {
   const handleOAuth = async (provider: 'google' | 'github') => {
     setLoading(true);
     setError('');
+    queueAuthMethod(provider);
     const { error: oauthError } = await insforge.auth.signInWithOAuth({
       provider,
       redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
     });
     setLoading(false);
     if (oauthError) {
-      setError(oauthError.message || `Could not sign in with ${provider}`);
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(PENDING_AUTH_METHOD_KEY);
+      }
+      setError(normalizeAuthErrorMessage(oauthError.message, `Could not sign in with ${provider}`));
       return;
     }
-    rememberAuthMethod(provider);
+  };
+
+  const submitPrimaryAction = () => {
+    if (mode === 'signup') {
+      void handleSignUp();
+      return;
+    }
+
+    if (mode === 'signin') {
+      void handleSignIn();
+      return;
+    }
+
+    void handleVerify();
   };
 
   const renderLastUsed = (method: AuthMethod) => lastAuthMethod === method ? (
@@ -233,14 +300,30 @@ export default function OnboardingFlow() {
         maxWidth: 960, width: 'min(960px, 100%)', borderRadius: 'var(--radius-3xl)',
         background: 'rgba(12,16,24,0.94)', backdropFilter: 'blur(20px) saturate(145%)',
         border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'var(--shadow-modal)',
-        overflow: 'hidden', position: 'relative',
+        overflow: 'hidden', position: 'relative', maxHeight: 'min(92vh, 900px)',
       }}>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close sign in"
+            style={{
+              position: 'absolute', top: 18, right: 18, zIndex: 5,
+              width: 38, height: 38, borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.06)', color: '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+            }}
+          >
+            ×
+          </button>
+        )}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isWide ? 'minmax(320px, 0.92fr) minmax(360px, 1fr)' : '1fr',
           position: 'relative',
+          maxHeight: 'min(92vh, 900px)',
         }}>
           <div style={{
+            display: isWide ? 'block' : 'none',
             padding: isWide ? '42px 34px 38px 40px' : '28px 24px 10px',
             borderRight: isWide ? '1px solid rgba(255,255,255,0.08)' : 'none',
             borderBottom: isWide ? 'none' : '1px solid rgba(255,255,255,0.08)',
@@ -282,14 +365,14 @@ export default function OnboardingFlow() {
             </div>
           </div>
 
-          <div style={{ padding: isWide ? 40 : '24px 24px 30px', textAlign: 'center' }}>
+          <div style={{ padding: isWide ? 40 : '22px 18px 22px', textAlign: 'center', overflowY: 'auto' }}>
             {step === 1 && (
               <div style={{ maxWidth: 420, margin: '0 auto' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.78)', fontSize: 12, fontWeight: 600, marginBottom: 18 }}>
                   Beautifully secure by default
                 </div>
-                <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 12, letterSpacing: '-0.03em' }}>Welcome to Arcus</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
+                <h2 style={{ fontSize: isWide ? 28 : 24, fontWeight: 700, marginBottom: 12, letterSpacing: '-0.03em' }}>Welcome to Arcus</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.7, marginBottom: isWide ? 28 : 20 }}>
                   Create an account to unlock chat, research, image generation, and your synced Arcus identity across devices.
                 </p>
                 <button onClick={() => setStep(2)} style={{
@@ -304,52 +387,71 @@ export default function OnboardingFlow() {
             )}
 
             {step === 2 && (
-              <div style={{ maxWidth: 420, margin: '0 auto' }}>
+              <form
+                style={{ maxWidth: 420, margin: '0 auto' }}
+                autoComplete="on"
+                onSubmit={event => {
+                  event.preventDefault();
+                  submitPrimaryAction();
+                }}
+              >
+            {!isWide && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 14 }}>
+                <img src={brandLogoUrl} alt="Arcus" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: 18, letterSpacing: '-0.04em' }}>Arcus</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Sign in and get right back to it.</div>
+                </div>
+              </div>
+            )}
             <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12 }}>{mode === 'signin' ? 'Welcome back' : mode === 'verify' ? 'Verify your email' : 'Create your account'}</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 20 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>
               {mode === 'signin' ? 'Sign in to continue using Arcus.' : mode === 'verify' ? 'Enter the 6-digit code from your inbox.' : 'Every user gets a unique Arcus handle.'}
             </p>
             {mode !== 'verify' && (
               <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
                 {mode === 'signup' && (
                   <input value={username} onChange={e => setUsername(e.target.value.slice(0, 30))}
+                    name="username" autoComplete="username" autoCapitalize="none" spellCheck={false}
                     placeholder="Choose a username" autoFocus
                     style={{
                       width: '100%', padding: '12px 16px', background: 'var(--glass-input)',
                       border: '1px solid var(--glass-border)', borderRadius: 25,
                       color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
-                      textAlign: 'center',
+                      textAlign: 'left',
                     }} />
                 )}
-                <input value={email} onChange={e => setEmail(e.target.value.trim())}
+                <input value={email} onChange={e => setEmail(e.target.value)} onBlur={e => setEmail(e.target.value.trim())}
+                  type="email" name="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false}
                   placeholder="Email address"
                   style={{
                     width: '100%', padding: '12px 16px', background: 'var(--glass-input)',
                     border: '1px solid var(--glass-border)', borderRadius: 25,
                     color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
-                    textAlign: 'center',
+                    textAlign: 'left',
                   }} />
                 <input value={password} type="password" onChange={e => setPassword(e.target.value)}
+                  name="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   placeholder={mode === 'signup' ? 'Create a password' : 'Password'}
                   style={{
                     width: '100%', padding: '12px 16px', background: 'var(--glass-input)',
                     border: '1px solid var(--glass-border)', borderRadius: 25,
                     color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
-                    textAlign: 'center',
+                    textAlign: 'left',
                   }} />
               </div>
             )}
             {mode === 'verify' && (
               <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
                 <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="6-digit verification code" autoFocus
+                  name="otp" autoComplete="one-time-code" inputMode="numeric" placeholder="6-digit verification code" autoFocus
                   style={{
                     width: '100%', padding: '12px 16px', background: 'var(--glass-input)',
                     border: '1px solid var(--glass-border)', borderRadius: 25,
                     color: 'var(--text-primary)', fontSize: 16, outline: 'none', fontFamily: 'inherit',
                     textAlign: 'center', letterSpacing: '0.28em',
                   }} />
-                <button onClick={() => void handleResendVerification()} disabled={loading}
+                <button type="button" onClick={() => void handleResendVerification()} disabled={loading}
                   style={{
                     width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
                     opacity: loading ? 0.65 : 1,
@@ -364,14 +466,14 @@ export default function OnboardingFlow() {
               </div>
             )}
             <div style={{ display: 'grid', gap: 10, marginBottom: 18 }}>
-              <button onClick={() => handleOAuth('google')} disabled={loading} style={{
+              <button type="button" onClick={() => handleOAuth('google')} disabled={loading} style={{
                 width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 600 }}><GoogleIcon /> Continue with Google</span>
                 {renderLastUsed('google')}
               </button>
-              <button onClick={() => handleOAuth('github')} disabled={loading} style={{
+              <button type="button" onClick={() => handleOAuth('github')} disabled={loading} style={{
                 width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
@@ -386,12 +488,12 @@ export default function OnboardingFlow() {
             </div>
             {error && <div style={{ fontSize: 12, color: 'var(--accent-red)', marginBottom: 16 }}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setStep(1)} style={{
+              <button type="button" onClick={() => onClose ? onClose() : setStep(1)} style={{
                 flex: 1, padding: '12px 0', background: 'var(--glass-button)',
                 border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)',
                 color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
-              }}>Back</button>
-              <button onClick={() => { if (mode === 'signup') void handleSignUp(); else if (mode === 'signin') void handleSignIn(); else void handleVerify(); }} disabled={loading || (mode === 'signup' ? (!username.trim() || !email.trim() || password.length < 6) : mode === 'signin' ? (!email.trim() || !password) : otp.length !== 6)} style={{
+              }}>{onClose ? 'Close' : 'Back'}</button>
+              <button type="submit" disabled={loading || (mode === 'signup' ? (!username.trim() || !email.trim() || password.length < 6) : mode === 'signin' ? (!email.trim() || !password) : otp.length !== 6)} style={{
                 flex: 2, padding: '12px 0', background: 'var(--accent-blue)',
                 border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff',
                 fontSize: 14, fontWeight: 600, cursor: 'pointer',
@@ -402,14 +504,14 @@ export default function OnboardingFlow() {
             </div>
             <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
               {mode === 'signup' ? (
-                <button onClick={() => { setMode('signin'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>Already have an account? Sign in</button>
+                <button type="button" onClick={() => { setMode('signin'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>Already have an account? Sign in</button>
               ) : mode === 'signin' ? (
-                <button onClick={() => { setMode('signup'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>Need an account? Create one</button>
+                <button type="button" onClick={() => { setMode('signup'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>Need an account? Create one</button>
               ) : (
-                <button onClick={() => { setMode('signin'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>I verified already — take me to sign in</button>
+                <button type="button" onClick={() => { setMode('signin'); setError(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontFamily: 'inherit' }}>I verified already — take me to sign in</button>
               )}
             </div>
-              </div>
+              </form>
             )}
           </div>
         </div>

@@ -6,8 +6,10 @@ export interface Message {
   model?: { id: string; name: string; provider: string } | null;
   isStreaming?: boolean;
   reasoning?: ReasoningStep[];
+  toolUsage?: ToolUsageItem[];
   attachments?: ChatAttachment[];
   research?: ResearchPacket;
+  customCard?: CustomCard;
 }
 
 export interface ChatAttachment {
@@ -31,10 +33,20 @@ export interface ResearchSource {
 
 export interface ResearchPacket {
   mode: 'standard' | 'deep';
+  query?: string;
   queries: string[];
   sources: ResearchSource[];
   brief?: string;
   trustedDomains?: string[];
+  factChecked?: boolean;
+}
+
+export interface ToolUsageItem {
+  id: string;
+  kind: 'search' | 'results' | 'weather' | 'facts' | 'artifact' | 'market' | 'sports' | 'conversion' | 'travel';
+  label: string;
+  detail?: string;
+  status: 'pending' | 'running' | 'complete' | 'error';
 }
 
 export interface ReasoningStep {
@@ -43,6 +55,121 @@ export interface ReasoningStep {
   detail?: string;
   status: 'pending' | 'running' | 'complete' | 'error';
 }
+
+export interface WeatherCardData {
+  location: string;
+  condition: string;
+  icon: string;
+  temperatureC: number;
+  temperatureF: number;
+  apparentTemperatureC?: number;
+  apparentTemperatureF?: number;
+  localTime?: string;
+  locationSource?: 'device' | 'query';
+  daily: Array<{
+    label: string;
+    condition: string;
+    icon: string;
+    maxC: number;
+    minC: number;
+    maxF: number;
+    minF: number;
+  }>;
+  sourceLabel: string;
+}
+
+export interface ProfileCardData {
+  name: string;
+  subtitle?: string;
+  summary: string;
+  imageUrl?: string;
+  sourceUrl?: string;
+  quickFacts?: string[];
+  sourceLabel: string;
+}
+
+export interface MarketCardData {
+  assetType: 'stock' | 'crypto';
+  symbol: string;
+  name: string;
+  price: number;
+  currency: string;
+  changePercent?: number;
+  changeValue?: number;
+  exchange?: string;
+  marketState?: string;
+  openPrice?: number;
+  dayHigh?: number;
+  dayLow?: number;
+  volume?: number;
+  averageVolume?: number;
+  marketCap?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  points: Array<{
+    label: string;
+    value: number;
+  }>;
+  sourceLabel: string;
+}
+
+export interface SportsCardData {
+  league: string;
+  queryLabel: string;
+  updatedAt?: string;
+  events: Array<{
+    id: string;
+    status: string;
+    summary?: string;
+    homeTeam: string;
+    awayTeam: string;
+    homeScore: string;
+    awayScore: string;
+    venue?: string;
+    startTime?: string;
+  }>;
+  sourceLabel: string;
+}
+
+export interface ConversionCardData {
+  category: string;
+  inputLabel: string;
+  primaryResult: string;
+  formula?: string;
+  quickResults: Array<{
+    label: string;
+    value: string;
+  }>;
+  sourceLabel: string;
+}
+
+export interface TravelCardData {
+  location: string;
+  region?: string;
+  country?: string;
+  timezone: string;
+  localTime: string;
+  coordinates: string;
+  mapImageUrl?: string;
+  summary?: string;
+  sourceLabel: string;
+}
+
+export interface MathCardData {
+  topic: string;
+  prompt: string;
+  badge: string;
+  hints: string[];
+}
+
+export type CustomCard =
+  | { type: 'weather'; data: WeatherCardData }
+  | { type: 'profile'; data: ProfileCardData }
+  | { type: 'market'; data: MarketCardData }
+  | { type: 'sports'; data: SportsCardData }
+  | { type: 'conversion'; data: ConversionCardData }
+  | { type: 'travel'; data: TravelCardData }
+  | { type: 'math'; data: MathCardData };
 
 export interface ChatSettings {
   systemPrompt: string;
@@ -68,10 +195,17 @@ export interface Conversation {
 export interface ModelInfo {
   id: string;
   name: string;
+  provider?: string;
   runtime?: 'puter' | 'openrouter';
+  availableRuntimes?: Array<'puter' | 'openrouter'>;
   description?: string;
   created?: number;
   context_length?: number;
+  openness?: 'open' | 'proprietary';
+  intelligenceIndex?: number;
+  latencySeconds?: number;
+  speedTokensPerSecond?: number;
+  priceBlended?: number;
   pricing?: {
     prompt?: string;
     completion?: string;
@@ -120,7 +254,8 @@ export interface StudioGeneration {
   status: 'pending' | 'generating' | 'complete' | 'error';
   error?: string;
   dimensions: { width: number; height: number };
-  style?: string[];
+  style?: string[] | string;
+  aspect?: string;
 }
 
 export interface AgentNode {
@@ -140,6 +275,43 @@ export interface AgentEdge {
   targetId: string;
   sourcePort: 'output';
   targetPort: 'input';
+  label?: string;
+}
+
+export interface AgentRunStep {
+  nodeId: string;
+  nodeName: string;
+  nodeKind: string;
+  status: 'success' | 'error' | 'skipped';
+  elapsed: number;
+  timestamp: number;
+  input?: unknown;
+  output?: unknown;
+  error?: string;
+  detail: string;
+}
+
+export interface SavedAgentWorkflow {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: number;
+  updatedAt: number;
+  nodes: AgentNode[];
+  edges: AgentEdge[];
+  triggerInput: string;
+}
+
+export interface AgentRunRecord {
+  id: string;
+  workflowName: string;
+  timestamp: number;
+  duration: number;
+  status: 'success' | 'error';
+  summary: string;
+  finalOutput?: unknown;
+  error?: string | null;
+  steps: Record<string, AgentRunStep>;
 }
 
 export interface AgentWorkflow {
@@ -147,15 +319,24 @@ export interface AgentWorkflow {
   edges: AgentEdge[];
   selectedNodeId: string | null;
   workflowName: string;
+  activeSavedWorkflowId: string | null;
   isRunning: boolean;
   executionLog: ExecutionLogEntry[];
+  triggerInput: string;
+  lastRunOutput?: unknown;
+  lastRunStatus: 'idle' | 'success' | 'error';
+  lastRunError?: string | null;
+  lastRunAt: number | null;
+  lastRunSteps: Record<string, AgentRunStep>;
+  runHistory: AgentRunRecord[];
+  savedWorkflows: SavedAgentWorkflow[];
 }
 
 export interface ExecutionLogEntry {
   timestamp: number;
   nodeId: string;
   nodeName: string;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   elapsed: number;
   input?: unknown;
   output?: unknown;
@@ -168,9 +349,13 @@ export interface PersonalizationSettings {
   responseStyle: 'balanced' | 'concise' | 'detailed';
   researchDepth: 'standard' | 'deep' | 'exhaustive';
   trustedDomains: string[];
+  autoScrollOnStream: boolean;
+  animationsEnabled: boolean;
+  showTimestamps: boolean;
+  compactChatSpacing: boolean;
 }
 
 export type TabType = 'home' | 'studio' | 'agent';
 export type ModalType = 'settings' | 'pricing' | 'rename' | 'delete' | 'model-selector' | 'personalization' | null;
-export type SettingsSection = 'account' | 'appearance' | 'system-prompt' | 'memory' | 'usage' | 'about';
+export type SettingsSection = 'account' | 'appearance' | 'personalization' | 'chat' | 'memory' | 'usage' | 'about';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';

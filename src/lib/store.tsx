@@ -4,17 +4,18 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import {
   Conversation, SelectedModel, ChatSettings, MemoryItem, UsageData,
   TabType, ModalType, SettingsSection, ToastType, ModelInfo,
-  AgentNode, AgentEdge, ExecutionLogEntry, StudioGeneration, PersonalizationSettings,
+  AgentNode, AgentEdge, AgentWorkflow, StudioGeneration, PersonalizationSettings,
 } from './types';
 import { getStorage, setStorage, clearAllStorage } from './storage';
 import { generateUUID } from './utils';
-import { insforge } from './insforge';
+import { insforge, persistInsforgeSessionLocally } from './insforge';
 import { createGuestUserState, mapInsforgeUserToStateUser } from './auth';
-import { fetchRemoteConversations, syncRemoteConversations } from './remoteSync';
+import { fetchRemoteConversations, resetRemoteSyncAuthState, syncRemoteConversations } from './remoteSync';
+import { ROUTER_SELECTED_MODEL } from './modelRouter';
 
 /* ---------- State shape ---------- */
 export interface AppState {
-  user: { id: string; email: string; emailVerified: boolean; username: string; apiKey: string; tier: 'free' | 'pro'; avatar: string; avatarColor: string };
+  user: { id: string; email: string; emailVerified: boolean; username: string; apiKey: string; tier: 'free' | 'pro' | 'owner'; avatar: string; avatarColor: string };
   activeTab: TabType;
   conversations: Conversation[];
   activeChatId: string | null;
@@ -23,8 +24,8 @@ export interface AppState {
   selectedModel: SelectedModel;
   allModels: ModelInfo[];
   favoriteModelIds: string[];
-  studio: { activeSubTab: string; generationQueue: StudioGeneration[]; history: StudioGeneration[] };
-  agent: { nodes: AgentNode[]; edges: AgentEdge[]; selectedNodeId: string | null; workflowName: string; isRunning: boolean; executionLog: ExecutionLogEntry[] };
+  studio: { activeSubTab: string; generationQueue: StudioGeneration[]; history: StudioGeneration[]; selectedGenerationId: string | null };
+  agent: AgentWorkflow;
   ui: { sidebarCollapsed: boolean; activeModal: ModalType; activeSettingsSection: SettingsSection; chatSettingsPanelOpen: boolean };
   memory: { enabled: boolean; items: MemoryItem[] };
   preferences: PersonalizationSettings;
@@ -46,9 +47,13 @@ const DEFAULT_PREFERENCES: PersonalizationSettings = {
   responseStyle: 'balanced',
   researchDepth: 'deep',
   trustedDomains: [],
+  autoScrollOnStream: true,
+  animationsEnabled: true,
+  showTimestamps: false,
+  compactChatSpacing: false,
 };
 
-const DEFAULT_MODEL: SelectedModel = { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', runtime: 'puter' };
+const DEFAULT_MODEL: SelectedModel = ROUTER_SELECTED_MODEL;
 
 function sortConversations(conversations: Conversation[]): Conversation[] {
   return [...conversations].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
@@ -65,9 +70,25 @@ function initialState(): AppState {
     selectedModel: DEFAULT_MODEL,
     allModels: [],
     favoriteModelIds: [],
-    studio: { activeSubTab: 'image', generationQueue: [], history: [] },
-    agent: { nodes: [], edges: [], selectedNodeId: null, workflowName: 'Untitled Workflow', isRunning: false, executionLog: [] },
-    ui: { sidebarCollapsed: false, activeModal: null, activeSettingsSection: 'account', chatSettingsPanelOpen: false },
+    studio: { activeSubTab: 'generate', generationQueue: [], history: [], selectedGenerationId: null },
+    agent: {
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      workflowName: 'Untitled Workflow',
+      activeSavedWorkflowId: null,
+      isRunning: false,
+      executionLog: [],
+      triggerInput: '',
+      lastRunOutput: undefined,
+      lastRunStatus: 'idle',
+      lastRunError: null,
+      lastRunAt: null,
+      lastRunSteps: {},
+      runHistory: [],
+      savedWorkflows: [],
+    },
+    ui: { sidebarCollapsed: true, activeModal: null, activeSettingsSection: 'account', chatSettingsPanelOpen: false },
     memory: { enabled: true, items: [] },
     preferences: { ...DEFAULT_PREFERENCES },
     usage: { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} },
@@ -198,6 +219,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState());
   const stateRef = useRef(state);
   const hasHydratedRemoteRef = useRef(false);
+  const lastSessionSyncAtRef = useRef(0);
 
   useEffect(() => {
     stateRef.current = state;
@@ -215,11 +237,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const favorites = getStorage<string[]>('favorites', []);
       const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
       const cachedConversations = getStorage<Conversation[]>('conversations', []);
+      const studio = getStorage<AppState['studio']>('studio', { activeSubTab: 'generate', generationQueue: [], history: [], selectedGenerationId: null });
+      const agent = getStorage<AppState['agent']>('agent', {
+        nodes: [],
+        edges: [],
+        selectedNodeId: null,
+        workflowName: 'Untitled Workflow',
+        activeSavedWorkflowId: null,
+        isRunning: false,
+        executionLog: [],
+        triggerInput: '',
+        lastRunOutput: undefined,
+        lastRunStatus: 'idle',
+        lastRunError: null,
+        lastRunAt: null,
+        lastRunSteps: {},
+        runHistory: [],
+        savedWorkflows: [],
+      });
       let user = createGuestUserState();
 
       const { data } = await insforge.auth.getCurrentSession();
       if (data.session?.user) {
+        persistInsforgeSessionLocally();
         user = mapInsforgeUserToStateUser(data.session.user);
+        resetRemoteSyncAuthState(data.session.user.id);
+        if (typeof window !== 'undefined') {
+          const pendingAuthMethod = window.sessionStorage.getItem('arcus_pending_auth_method');
+          if (pendingAuthMethod === 'google' || pendingAuthMethod === 'github') {
+            window.localStorage.setItem('arcus_last_auth_method', pendingAuthMethod);
+            window.sessionStorage.removeItem('arcus_pending_auth_method');
+          }
+        }
       }
 
       let mergedConversations = sortConversations(cachedConversations);
@@ -250,6 +299,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       hasHydratedRemoteRef.current = true;
 
+      // Owner role: unlimited usage
+      const OWNER_EMAILS = ['azuzuly79@pm.me'];
+      if (OWNER_EMAILS.includes(user.email.toLowerCase())) {
+        user = { ...user, tier: 'owner' };
+        usage.today.limit = 999999;
+      }
+
       dispatch({
         type: 'INIT',
         state: {
@@ -262,6 +318,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           usage,
           favoriteModelIds: favorites,
           settings: savedSettings,
+          studio,
+          agent,
         },
       });
     };
@@ -283,7 +341,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setStorage('usage', state.usage);
     setStorage('favorites', state.favoriteModelIds);
     setStorage('settings', state.settings);
-  }, [state.conversations, state.selectedModel, state.memory, state.preferences, state.usage, state.favoriteModelIds, state.settings, state.initialized]);
+    setStorage('studio', state.studio);
+    setStorage('agent', state.agent);
+  }, [state.conversations, state.selectedModel, state.memory, state.preferences, state.usage, state.favoriteModelIds, state.settings, state.studio, state.agent, state.initialized]);
 
   useEffect(() => {
     if (!state.initialized || !state.user.id || !hasHydratedRemoteRef.current) return;
@@ -296,6 +356,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(timer);
   }, [state.conversations, state.initialized, state.user.id]);
+
+  useEffect(() => {
+    if (!state.initialized || !state.user.id) return;
+
+    const syncSession = async () => {
+      if (Date.now() - lastSessionSyncAtRef.current < 12000) return;
+      lastSessionSyncAtRef.current = Date.now();
+
+      const { data } = await insforge.auth.getCurrentSession();
+      if (!data.session?.user) return;
+
+      persistInsforgeSessionLocally();
+      resetRemoteSyncAuthState(data.session.user.id);
+      const mappedUser = mapInsforgeUserToStateUser(data.session.user);
+      const currentUser = stateRef.current.user;
+
+      if (
+        currentUser.id !== mappedUser.id ||
+        currentUser.email !== mappedUser.email ||
+        currentUser.username !== mappedUser.username ||
+        currentUser.emailVerified !== mappedUser.emailVerified
+      ) {
+        dispatch({ type: 'SET_USER', user: mappedUser });
+      }
+    };
+
+    const handleFocus = () => {
+      void syncSession();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncSession();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [dispatch, state.initialized, state.user.id]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = generateUUID();

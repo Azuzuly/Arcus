@@ -32,7 +32,7 @@ export function createGuestUserState() {
     emailVerified: false,
     username: '',
     apiKey: '',
-    tier: 'free' as const,
+    tier: 'free' as 'free' | 'pro' | 'owner',
     avatar: '',
     avatarColor: '#3B82F6',
   };
@@ -48,7 +48,7 @@ export function mapInsforgeUserToStateUser(user: InsforgeUserLike) {
     emailVerified: Boolean(user.emailVerified),
     username,
     apiKey: '',
-    tier: 'free' as const,
+    tier: 'free' as 'free' | 'pro' | 'owner',
     avatar: getAvatarInitials(username),
     avatarColor: getAvatarColor(username),
   };

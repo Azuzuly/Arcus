@@ -1,10 +1,52 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { CSSProperties, useState, useRef, useCallback } from 'react';
+import { CSSProperties, useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { ChatAttachment } from '@/lib/types';
 import { generateUUID } from '@/lib/utils';
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+  }
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: ArrayLike<{
+    isFinal: boolean;
+    0: { transcript: string };
+  }>;
+}
+
+function isLikelyLocalWeatherPrompt(query: string): boolean {
+  return /^(?:weather|forecast|temperature|rain|snow|wind|humidity|humid)(?:\s+(?:today|now|outside|please))?[?.!]*$/i.test(query.trim())
+    || /(what'?s|what is|current|today|now|outside|here|my area|where i live).*(weather|forecast|temperature)|\b(weather|forecast)\b.*(here|now|today|outside|current)/i.test(query);
+}
+
+function requestBrowserLocation(): Promise<{ latitude: number; longitude: number } | null> {
+  if (typeof window === 'undefined' || !window.isSecureContext || !('geolocation' in navigator)) return Promise.resolve(null);
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
 
 function formatAttachmentSize(size: number): string {
   if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
@@ -21,13 +63,17 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export default function ChatInput({ onSend }: { onSend: (content: string, meta?: { deepResearch?: boolean; attachments?: ChatAttachment[] }) => void }) {
+export default function ChatInput({ onSend }: { onSend: (content: string, meta?: { deepResearch?: boolean; attachments?: ChatAttachment[]; deviceLocation?: { latitude: number; longitude: number } | null }) => void }) {
   const { state, dispatch, showToast } = useStore();
   const [value, setValue] = useState('');
   const [deepResearch, setDeepResearch] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const dictationBaseRef = useRef('');
+  const finalTranscriptRef = useRef('');
   // unused, we check isEmpty below instead
 
   const handleInput = useCallback((val: string) => {
@@ -39,10 +85,11 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
     }
   }, []);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = value.trim();
     if ((!trimmed && attachments.length === 0) || state.isStreaming) return;
-    onSend(trimmed, { deepResearch, attachments });
+    const deviceLocation = trimmed && isLikelyLocalWeatherPrompt(trimmed) ? await requestBrowserLocation() : null;
+    onSend(trimmed, { deepResearch, attachments, deviceLocation });
     setValue('');
     setDeepResearch(false);
     setAttachments([]);
@@ -53,7 +100,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   }, [handleSend]);
 
@@ -76,9 +123,105 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
     }
   }, [showToast]);
 
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+  }, []);
+
+  const stopDictation = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+  }, []);
+
+  const handleLocationClick = useCallback(async () => {
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      showToast('Location access requires HTTPS or localhost.', 'warning');
+      return;
+    }
+
+    const location = await requestBrowserLocation();
+    if (location) {
+      showToast('Location permission is enabled for local weather.', 'success');
+    } else {
+      showToast('Location permission was not granted. Check your browser site permissions if no prompt appeared.', 'warning');
+    }
+  }, [showToast]);
+
+  const handleMicClick = useCallback(async () => {
+    if (isListening) {
+      stopDictation();
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+    if (!window.isSecureContext) {
+      showToast('Microphone access requires HTTPS or localhost.', 'warning');
+      return;
+    }
+
+    const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!RecognitionCtor) {
+      showToast('Live dictation is not supported in this browser.', 'warning');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      showToast('Microphone access is unavailable in this browser context.', 'warning');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+    } catch {
+      showToast('Microphone permission is required for live dictation. Check your browser site permissions if no prompt appeared.', 'warning');
+      return;
+    }
+
+    const recognition = new RecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    dictationBaseRef.current = value ? `${value.trimEnd()}${value.trim() ? ' ' : ''}` : '';
+    finalTranscriptRef.current = '';
+
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = finalTranscriptRef.current;
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript || '';
+        if (result?.isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      finalTranscriptRef.current = finalTranscript;
+      handleInput(`${dictationBaseRef.current}${finalTranscript}${interimTranscript}`.trimStart());
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      if (event.error && event.error !== 'no-speech' && event.error !== 'aborted') {
+        showToast('Microphone dictation hit an error. Please try again.', 'error');
+      }
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  }, [handleInput, isListening, showToast, stopDictation, value]);
+
   const tokenEstimate = Math.ceil((value.length + attachments.reduce((total, item) => total + item.name.length, 0)) / 4);
-  const activeConv = state.conversations.find(c => c.id === state.activeChatId);
-  const isEmpty = !activeConv || activeConv.messages.length === 0;
   const iconButtonStyle: CSSProperties = {
     width: 36,
     height: 36,
@@ -95,40 +238,13 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
   };
 
   return (
-    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 18px 18px', zIndex: 10 }}>
-      <div style={{ display: 'flex', justifyContent: isEmpty ? 'center' : 'flex-start', marginBottom: 12 }}>
-        <button
-          onClick={() => setDeepResearch(v => !v)}
-          title="Deep Research"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '10px 14px',
-            borderRadius: 14,
-            border: `1px solid ${deepResearch ? 'rgba(127,194,255,0.42)' : 'rgba(255,255,255,0.08)'}`,
-            background: deepResearch ? 'linear-gradient(135deg, rgba(59,130,246,0.22), rgba(143,92,246,0.18))' : 'rgba(255,255,255,0.045)',
-            color: deepResearch ? '#fff' : 'var(--text-secondary)',
-            cursor: 'pointer',
-            boxShadow: deepResearch ? '0 14px 36px rgba(59,130,246,0.18)' : 'none',
-            transition: 'all var(--dur-base) var(--ease-out)',
-            fontFamily: 'inherit',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <span>🔬</span>
-          <span>Deep Research</span>
-          <span style={{ fontSize: 11, color: deepResearch ? 'rgba(255,255,255,0.74)' : 'var(--text-muted)' }}>
-            {deepResearch ? 'On' : 'Off'}
-          </span>
-        </button>
-      </div>
-
+    <div className="chat-input-wrapper" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 clamp(10px, 3vw, 18px) clamp(10px, 3vw, 18px)', zIndex: 10 }}>
       {attachments.length > 0 && (
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 2px 10px' }}>
           {attachments.map(attachment => (
             <div key={attachment.id} style={{
-              minWidth: attachment.kind === 'image' ? 126 : 170,
-              maxWidth: 220,
+              minWidth: attachment.kind === 'image' ? 100 : 140,
+              maxWidth: 200,
               borderRadius: 16,
               background: 'linear-gradient(180deg, rgba(43,43,48,0.92), rgba(18,18,21,0.96))',
               border: '1px solid rgba(255,255,255,0.09)',
@@ -183,12 +299,65 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
       )}
 
       {/* Input panel */}
-      <div style={{
-        background: 'linear-gradient(180deg, rgba(49,49,53,0.82), rgba(21,21,24,0.94))', backdropFilter: 'blur(28px)',
-        border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px',
-        padding: '14px 14px 12px',
-        boxShadow: 'var(--shadow-panel)',
+      <div className="gradient-border-wrap" style={{
+        background: 'rgba(32,34,42,0.72)', backdropFilter: 'blur(40px) saturate(160%)',
+        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px',
+        padding: '12px 14px 12px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setDeepResearch(v => !v)}
+              title="Deep Research"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px',
+                borderRadius: 999,
+                border: `1px solid ${deepResearch ? 'rgba(127,194,255,0.42)' : 'rgba(255,255,255,0.08)'}`,
+                background: deepResearch ? 'linear-gradient(135deg, rgba(59,130,246,0.22), rgba(143,92,246,0.18))' : 'rgba(255,255,255,0.045)',
+                color: deepResearch ? '#fff' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                boxShadow: deepResearch ? '0 12px 28px rgba(59,130,246,0.16)' : 'none',
+                transition: 'all var(--dur-base) var(--ease-out)',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              <span>🔬</span>
+              <span>Deep research</span>
+              <span style={{ fontSize: 10, color: deepResearch ? 'rgba(255,255,255,0.74)' : 'var(--text-muted)' }}>
+                {deepResearch ? 'On' : 'Off'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'SHOW_MODAL', modal: 'personalization' })}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+              }}
+            >
+              ✦ Personalize
+            </button>
+          </div>
+
+          <span style={{
+            fontSize: 11,
+            color: state.preferences.webSearchEnabled ? 'var(--accent-mint)' : 'var(--text-muted)',
+            padding: '6px 10px',
+            borderRadius: 'var(--radius-pill)',
+            background: state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.12)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.18)' : 'rgba(255,255,255,0.08)'}`,
+          }}>
+            {state.preferences.webSearchEnabled ? 'Web on' : 'Web off'} · {tokenEstimate} tokens
+          </span>
+        </div>
+
         <textarea ref={textareaRef} value={value}
           onChange={e => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -208,34 +377,43 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               onClick={() => fileInputRef.current?.click()}
               style={iconButtonStyle}
             >
-              ⤴
-            </button>
-            <button
-              type="button"
-              title="Personalization"
-              onClick={() => dispatch({ type: 'SHOW_MODAL', modal: 'personalization' })}
-              style={iconButtonStyle}
-            >
-              ✦
+              +
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{
-              fontSize: 11,
-              color: state.preferences.webSearchEnabled ? 'var(--accent-mint)' : 'var(--text-muted)',
-              padding: '5px 9px',
-              borderRadius: 'var(--radius-pill)',
-              background: state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.12)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.18)' : 'rgba(255,255,255,0.08)'}`,
-            }}>
-              {state.preferences.webSearchEnabled ? 'Web on' : 'Web off'} · {tokenEstimate} tokens
-            </span>
+            <button
+              type="button"
+              title={isListening ? 'Stop dictation' : 'Start dictation'}
+              onClick={handleMicClick}
+              className={isListening ? 'mic-active' : ''}
+              style={{
+                ...iconButtonStyle,
+                color: isListening ? '#fff' : 'var(--text-secondary)',
+                background: isListening ? 'rgba(239,68,68,0.18)' : iconButtonStyle.background,
+                border: isListening ? '1px solid rgba(239,68,68,0.32)' : iconButtonStyle.border,
+              }}
+            >
+              🎤
+            </button>
+            {isListening && (
+              <div className="voice-wave">
+                <span /><span /><span /><span /><span />
+              </div>
+            )}
+            <button
+              type="button"
+              title="Enable location"
+              onClick={handleLocationClick}
+              style={iconButtonStyle}
+            >
+              📍
+            </button>
             {(value.trim() || attachments.length > 0) && (
-              <button onClick={handleSend} style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-violet))', border: 'none', cursor: 'pointer',
+              <button type="button" onClick={() => { void handleSend(); }} title="Send message" style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer',
                 color: '#fff', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 10px 30px rgba(80,130,246,0.26)',
+                fontWeight: 700, fontFamily: 'inherit',
               }}>↑</button>
             )}
           </div>
@@ -249,7 +427,8 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
         onChange={handleFilesSelected}
         style={{ display: 'none' }}
       />
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <span className="privacy-badge" style={{ fontSize: 10, padding: '3px 8px' }}>🔒 Private</span>
         Arcus can make mistakes
       </div>
     </div>

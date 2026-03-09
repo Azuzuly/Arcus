@@ -1,10 +1,25 @@
+import katex from 'katex';
+
 export function renderMarkdown(text: string): string {
-  let html = escapeHtml(text);
+  const mathTokens = new Map<string, string>();
+  let tokenIndex = 0;
+  const withMathPlaceholders = text
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_match, expr: string) => {
+      const token = `__ARCUS_MATH_BLOCK_${tokenIndex++}__`;
+      mathTokens.set(token, `<div class="math-block">${katex.renderToString(expr.trim(), { throwOnError: false, displayMode: true })}</div>`);
+      return token;
+    })
+    .replace(/\$(?!\$)([^\n$]+?)\$(?!\$)/g, (_match, expr: string) => {
+      const token = `__ARCUS_MATH_INLINE_${tokenIndex++}__`;
+      mathTokens.set(token, katex.renderToString(expr.trim(), { throwOnError: false, displayMode: false }));
+      return token;
+    });
+
+  let html = escapeHtml(withMathPlaceholders);
 
   // Fenced code blocks
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
-    const id = 'cb-' + Math.random().toString(36).slice(2, 8);
-    return `<div class="code-block"><div class="code-block-header"><span>${lang || 'code'}</span><button class="code-copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(unescapeHtml(code.trim()))}')).then(()=>this.textContent='Copied!',()=>{});setTimeout(()=>this.textContent='Copy',2000)">Copy</button></div><pre id="${id}"><code>${code.trim()}</code></pre></div>`;
+  html = html.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
+    return `<div class="code-block"><div class="code-block-header"><span>${lang.trim() || 'code'}</span><button class="code-copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(unescapeHtml(code.trim()))}')).then(()=>this.textContent='Copied!',()=>{});setTimeout(()=>this.textContent='Copy',2000)">Copy</button></div><pre><code>${code.trim()}</code></pre></div>`;
   });
 
   // Inline code
@@ -30,6 +45,7 @@ export function renderMarkdown(text: string): string {
 
   // Ordered lists
   html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, match => match.includes('<ul>') ? match : `<ol>${match}</ol>`);
 
   // Tables
   html = html.replace(/^\|(.+)\|$/gm, (match) => {
@@ -52,6 +68,10 @@ export function renderMarkdown(text: string): string {
   // Clean up extra <br> around block elements
   html = html.replace(/<br>\s*(<h[1-4]|<ul|<ol|<blockquote|<table|<div)/g, '$1');
   html = html.replace(/(<\/h[1-4]>|<\/ul>|<\/ol>|<\/blockquote>|<\/table>|<\/div>)\s*<br>/g, '$1');
+
+  mathTokens.forEach((value, token) => {
+    html = html.replaceAll(token, value);
+  });
 
   return html;
 }

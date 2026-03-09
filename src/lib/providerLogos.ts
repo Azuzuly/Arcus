@@ -3,6 +3,7 @@ export const brandLogoUrl = '/logos/brand/arcus-logo.svg';
 export const providerLogos: Record<string, string> = {
   anthropic: '/logos/providers/Anthropic.png',
   openai: '/logos/providers/Chatgpt.jpg',
+  openrouter: '/logos/providers/OpenRouter.svg',
   chatgpt: '/logos/providers/Chatgpt.jpg',
   gpt: '/logos/providers/Chatgpt.jpg',
   google: '/logos/providers/Gemini.webp',
@@ -20,6 +21,7 @@ export const providerLogos: Record<string, string> = {
   cohere: '/logos/providers/Cohere.png',
   qwen: '/logos/providers/Qwen.png',
   alibaba: '/logos/providers/Qwen.png',
+  ai21: '/logos/providers/OpenRouter.svg',
 };
 
 function normalizeProviderKey(id: string): string {
@@ -38,6 +40,8 @@ function normalizeProviderKey(id: string): string {
     ['deepseek', 'deepseek'],
     ['mistral', 'mistral'],
     ['qwen', 'qwen'],
+    ['ai21', 'ai21'],
+    ['openrouter', 'openrouter'],
   ];
 
   for (const [needle, mapped] of aliasEntries) {

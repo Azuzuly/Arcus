@@ -5,7 +5,6 @@ import { useStore } from '@/lib/store';
 import { useState, useRef, useEffect } from 'react';
 import { TabType } from '@/lib/types';
 import { insforge } from '@/lib/insforge';
-import { brandLogoUrl } from '@/lib/providerLogos';
 
 export default function TopNav() {
   const { state, dispatch } = useStore();
@@ -22,7 +21,7 @@ export default function TopNav() {
   }, []);
 
   useEffect(() => {
-    const syncViewport = () => setIsCompact(window.innerWidth <= 860);
+    const syncViewport = () => setIsCompact(window.innerWidth <= 640);
     syncViewport();
     window.addEventListener('resize', syncViewport);
     return () => window.removeEventListener('resize', syncViewport);
@@ -35,57 +34,53 @@ export default function TopNav() {
   ];
 
   return (
-    <nav style={{
-      flexShrink: 0, height: 64, width: '100%', position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid var(--glass-border)',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isCompact ? '0 14px' : '0 24px',
+    <div style={{
+      position: 'fixed', top: 18, left: 18, right: 18, zIndex: 90,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+      pointerEvents: 'none',
     }}>
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 8 : 10, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, maxWidth: 'calc(100vw - 190px)', pointerEvents: 'auto', flexWrap: 'nowrap' }}>
         <button
           onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
           style={{
-            width: 34, height: 34, borderRadius: 12, border: '1px solid var(--glass-border)',
-            background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', cursor: 'pointer',
+            width: 40, height: 40, borderRadius: 14, border: '1px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.14)', color: 'var(--text-primary)', cursor: 'pointer',
+            backdropFilter: 'blur(24px) saturate(180%)', boxShadow: '0 12px 28px rgba(0,0,0,0.18)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
           }}
           title="Toggle sidebar"
         >
           ☰
         </button>
-        <img src={brandLogoUrl} alt="Arcus" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-        {!isCompact && <span style={{ color: '#fff', fontWeight: 700, fontSize: 18, letterSpacing: '-0.01em' }}>Arcus</span>}
+
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(28px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20,
+          padding: 5, boxShadow: '0 14px 36px rgba(0,0,0,0.2)', marginLeft: isCompact ? 2 : 8,
+          overflowX: 'auto',
+        }}>
+          {tabs.map(t => (
+            <button key={t.value} onClick={() => dispatch({ type: 'SET_TAB', tab: t.value })} style={{
+              padding: isCompact ? '8px 12px' : '8px 16px', borderRadius: 16, fontSize: isCompact ? 12 : 13, fontWeight: 600,
+              color: state.activeTab === t.value ? '#08111c' : 'rgba(255,255,255,0.74)',
+              background: state.activeTab === t.value ? 'rgba(255,255,255,0.88)' : 'transparent',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              boxShadow: state.activeTab === t.value ? '0 8px 24px rgba(255,255,255,0.18)' : 'none',
+              transition: 'all var(--dur-fast) var(--ease-out)',
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tab Control */}
-      <div style={{
-        position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', alignItems: 'center',
-        background: 'var(--glass-panel)', backdropFilter: 'blur(22px)',
-        border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)',
-        padding: 4, gap: 2, maxWidth: isCompact ? '42vw' : undefined,
-      }}>
-        {tabs.map(t => (
-          <button key={t.value} onClick={() => dispatch({ type: 'SET_TAB', tab: t.value })} style={{
-            padding: isCompact ? '6px 12px' : '6px 20px', borderRadius: 'var(--radius-xs)', fontSize: isCompact ? 12 : 14, fontWeight: 500,
-            color: state.activeTab === t.value ? '#0A0A0A' : 'var(--text-secondary)',
-            background: state.activeTab === t.value ? '#FFFFFF' : 'transparent',
-            border: 'none', cursor: 'pointer',
-            boxShadow: state.activeTab === t.value ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-            transition: 'all var(--dur-fast) var(--ease-out)',
-            fontFamily: 'inherit',
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* User Button */}
-      <div ref={dropdownRef} style={{ position: 'relative' }}>
+      <div ref={dropdownRef} style={{ position: 'relative', pointerEvents: 'auto' }}>
         <button onClick={() => setDropdownOpen(!dropdownOpen)} style={{
-          display: 'flex', alignItems: 'center', gap: 8, background: 'transparent',
-          border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-xs)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(28px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', padding: isCompact ? '8px' : '8px 10px', borderRadius: 18,
+          boxShadow: '0 14px 36px rgba(0,0,0,0.2)',
         }}>
           {state.settings?.profileImage ? (
             <img src={state.settings.profileImage} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
@@ -98,16 +93,16 @@ export default function TopNav() {
               {state.user.avatar}
             </div>
           )}
-          {!isCompact && <span style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{state.user.username}</span>}
-          {!isCompact && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>▾</span>}
+          {!isCompact && <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{state.user.username}</span>}
+          {!isCompact && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>▾</span>}
         </button>
 
         {dropdownOpen && (
           <div className="panel-enter" style={{
             position: 'absolute', top: '100%', right: 0, marginTop: 8,
-            background: 'var(--glass-panel)', backdropFilter: 'blur(22px) saturate(160%)',
-            border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)',
-            boxShadow: 'var(--shadow-card)', padding: 4, minWidth: 180, zIndex: 200,
+            background: 'rgba(18,22,30,0.92)', backdropFilter: 'blur(26px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18,
+            boxShadow: '0 18px 44px rgba(0,0,0,0.26)', padding: 6, minWidth: 190, zIndex: 200,
           }}>
             {[
               { icon: '⚙', label: 'Settings', action: () => { dispatch({ type: 'SHOW_MODAL', modal: 'settings' }); setDropdownOpen(false); } },
@@ -118,7 +113,7 @@ export default function TopNav() {
               <button key={item.label} onClick={item.action} style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px',
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                borderRadius: 'var(--radius-xs)', color: 'var(--text-primary)', fontSize: 14,
+                borderRadius: 12, color: 'var(--text-primary)', fontSize: 14,
                 fontFamily: 'inherit', transition: 'background var(--dur-fast) var(--ease-out)',
               }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-hover)')}
                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -129,6 +124,6 @@ export default function TopNav() {
           </div>
         )}
       </div>
-    </nav>
+    </div>
   );
 }

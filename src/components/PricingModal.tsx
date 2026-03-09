@@ -86,7 +86,18 @@ export default function PricingModal() {
             <div style={{ display: 'grid', gap: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
                 {plans.map(plan => (
-                  <button key={plan.id} onClick={() => setSelectedPlanId(plan.id)} style={{
+                  <div
+                    key={plan.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedPlanId(plan.id);
+                      }
+                    }}
+                    style={{
                     padding: 24, borderRadius: 22, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
                     background: selectedPlanId === plan.id ? 'rgba(59,130,246,0.14)' : 'rgba(255,255,255,0.03)',
                     border: `1px solid ${selectedPlanId === plan.id ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.08)'}`,
@@ -104,14 +115,14 @@ export default function PricingModal() {
                       ))}
                     </ul>
                     {plan.id === 'free' && (
-                      <button type="button" style={{
+                      <div style={{
                         marginTop: 18, width: '100%', padding: '11px 0',
                         background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 12, color: 'rgba(255,255,255,0.62)', fontSize: 14, fontWeight: 600,
-                        cursor: 'default', fontFamily: 'inherit',
-                      }}>{state.user.tier === 'free' ? 'Current plan' : 'Always available'}</button>
+                        cursor: 'default', fontFamily: 'inherit', textAlign: 'center',
+                      }}>{state.user.tier === 'free' ? 'Current plan' : 'Always available'}</div>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
 

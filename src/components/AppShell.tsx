@@ -8,6 +8,7 @@ import ChatView from './ChatView';
 import StudioView from './StudioView';
 import AgentView from './AgentView';
 import OnboardingFlow from './OnboardingFlow';
+import LandingPage from './LandingPage';
 import SettingsModal from './SettingsModal';
 import PricingModal from './PricingModal';
 import CommandPalette from './CommandPalette';
@@ -16,15 +17,24 @@ import { fetchModels } from '@/lib/openrouter';
 import RenameModal from './RenameModal';
 import DeleteModal from './DeleteModal';
 import PersonalizationPanel from './PersonalizationPanel';
+import UpgradeNudges from './UpgradeNudges';
 
 export default function AppShell() {
   const { state, dispatch, showToast } = useStore();
   const [isMobile, setIsMobile] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup');
   const wasMobileRef = useRef<boolean | null>(null);
+  const shellTopInset = 78;
+
+  const openAuth = (mode: 'signup' | 'signin' = 'signup') => {
+    setAuthMode(mode);
+    setAuthOpen(true);
+  };
 
   useEffect(() => {
     const syncViewport = () => {
-      const mobile = window.innerWidth <= 960;
+      const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       if (mobile && wasMobileRef.current === false && !state.ui.sidebarCollapsed) {
         dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } });
@@ -63,27 +73,39 @@ export default function AppShell() {
 
   if (!state.initialized) return <div style={{ background: '#050505', height: '100vh' }} />;
 
-  if (!state.user.id) return <OnboardingFlow />;
+  if (!state.user.id) {
+    return (
+      <>
+        <LandingPage onEnter={openAuth} />
+        {authOpen && (
+          <OnboardingFlow
+            initialMode={authMode}
+            defaultStep={2}
+            onClose={() => setAuthOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div id="app" style={{
-      display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', position: 'relative', overflow: 'hidden',
+      height: '100dvh', width: '100vw', position: 'relative', overflow: 'hidden',
       background: '#090b10',
     }}>
       <TopNav />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {state.activeTab === 'home' && !isMobile && <Sidebar />}
-        {state.activeTab === 'home' && isMobile && !state.ui.sidebarCollapsed && (
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        {state.activeTab === 'home' && !state.ui.sidebarCollapsed && (
           <>
             <div onClick={() => dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } })} style={{
-              position: 'absolute', inset: 0, background: 'rgba(4,5,7,0.58)', backdropFilter: 'blur(6px)', zIndex: 24,
+              position: 'absolute', inset: 0, background: 'rgba(4,5,7,0.46)', backdropFilter: 'blur(8px)', zIndex: 24,
             }} />
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 25 }}>
+            <div style={{ position: 'absolute', top: shellTopInset, bottom: 18, left: 18, zIndex: 25, maxWidth: isMobile ? 'calc(100vw - 36px)' : 360 }}>
               <Sidebar />
             </div>
           </>
         )}
-        <main style={{ flex: 1, overflow: 'hidden', position: 'relative', background: 'rgba(8,10,16,0.72)' }}>
+        <main style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'rgba(8,10,16,0.72)' }}>
           {state.activeTab === 'home' && <ChatView />}
           {state.activeTab === 'studio' && <StudioView />}
           {state.activeTab === 'agent' && <AgentView />}
@@ -95,6 +117,7 @@ export default function AppShell() {
       {state.ui.activeModal === 'rename' && <RenameModal />}
       {state.ui.activeModal === 'delete' && <DeleteModal />}
       {state.ui.activeModal === 'personalization' && <PersonalizationPanel />}
+      <UpgradeNudges />
       <CommandPalette />
       <Toast />
     </div>

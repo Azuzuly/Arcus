@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { brandLogoUrl, getProviderLogo } from '@/lib/providerLogos';
 
 const FEATURES = [
@@ -9,7 +9,7 @@ const FEATURES = [
   { emoji: '🎨', title: 'AI Studio', desc: 'Generate stunning images with FLUX, DALL-E, and Stable Diffusion. Create videos, upscale photos, and experiment with multiple art styles and aspect ratios.' },
   { emoji: '🤖', title: 'Agent Builder', desc: 'Design complex AI workflows visually. Drag and drop nodes, connect triggers to actions, chain multiple models together, and automate repetitive tasks.' },
   { emoji: '⚡', title: 'Real-time Streaming', desc: 'Watch AI responses appear word by word in real-time. No waiting for complete responses — start reading and reacting immediately.' },
-  { emoji: '🔒', title: 'Account-Gated Security', desc: 'Create an account once, keep your identity consistent, and unlock the full Arcus workspace with synced preferences.' },
+  { emoji: '🔒', title: 'Privacy-First Design', desc: 'Your conversations stay yours. No training on your data, no logging beyond your session, no third-party trackers. Encrypted in transit and at rest.' },
   { emoji: '🌙', title: 'Liquid Glass UI', desc: 'A beautiful dark interface with glassmorphism effects, aurora animations, and smooth transitions. Designed for focus and long creative sessions.' },
 ];
 
@@ -25,27 +25,75 @@ const MODELS_PREVIEW = [
 ];
 
 const USE_CASES = [
-  { icon: '✍️', title: 'Writing & Content', desc: 'Draft emails, blog posts, essays, stories, and marketing copy with AI assistance.' },
-  { icon: '💻', title: 'Code & Debug', desc: 'Write, review, and debug code in any language. Get explanations and optimizations.' },
-  { icon: '📊', title: 'Analysis & Research', desc: 'Summarize documents, analyze data, extract insights, and conduct deep research.' },
-  { icon: '🎓', title: 'Learning & Tutoring', desc: 'Get personalized explanations, practice problems, and study materials on any topic.' },
-  { icon: '💡', title: 'Brainstorming', desc: 'Generate ideas, explore concepts, plan projects, and get creative inspiration.' },
-  { icon: '🌐', title: 'Translation', desc: 'Translate between 100+ languages with context-aware, natural-sounding results.' },
+  { icon: '✍️', title: 'Writing & Content', desc: 'Draft launches, essays, docs, newsletters, and polished copy without losing your voice.' },
+  { icon: '💻', title: 'Code & Debug', desc: 'Jump from idea to working code, multi-file bundles, and tool-assisted fixes in one surface.' },
+  { icon: '📊', title: 'Analysis & Research', desc: 'Ask once, get live search, visual cards, sources, and compact tool traces when they actually matter.' },
+  { icon: '🎓', title: 'Learning & Tutoring', desc: 'Beautiful math, clearer explanations, and richer examples for concepts that deserve more than plain text.' },
+  { icon: '🧭', title: 'Plan & Navigate', desc: 'Weather, travel, maps, timezones, sports, markets, and conversions rendered as purpose-built answers.' },
+  { icon: '🎨', title: 'Create & Iterate', desc: 'Images, style exploration, prompt refinement, and workspace personalization that feels premium.' },
 ];
 
 const STATS = [
   { value: '500+', label: 'AI Models' },
-  { value: '0', label: 'Cost to Start' },
-  { value: '<1s', label: 'Response Time' },
-  { value: '∞', label: 'Possibilities' },
+  { value: '0', label: 'Data Sold' },
+  { value: 'Live', label: 'Streaming Answers' },
+  { value: '∞', label: 'Build Energy' },
 ];
 
-export default function LandingPage({ onEnter }: { onEnter: () => void }) {
+const NAV_ITEMS = [
+  { id: 'features', label: 'Features' },
+  { id: 'models', label: 'Models' },
+  { id: 'use-cases', label: 'Workflows' },
+];
+
+const FRAMEWORK_ICONS = ['react/x', 'nextjs/x', 'google/gemini', 'openai/gpt-4', 'anthropic/claude-3-opus', 'meta-llama/llama-3', 'mistralai/mistral-large'];
+
+const HERO_PROMPTS = [
+  'Build a premium client dashboard with auth, analytics cards, and billing settings.',
+  'Plan a Tokyo trip with weather, timezone, and a 3-day itinerary.',
+  'Explain the quadratic formula with clean math and a graph-ready example.',
+];
+
+const HERO_HEADLINES = [
+  'Think deeper|Ship faster|Stay in flow',
+  'Ask better|See richer answers|Move quicker',
+  'Research live|Build visually|Keep momentum',
+  'Write code|Solve math|Launch ideas',
+];
+
+export default function LandingPage({ onEnter }: { onEnter: (mode?: 'signup' | 'signin') => void }) {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [headlineIndex, setHeadlineIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const headlineLines = useMemo(() => HERO_HEADLINES[headlineIndex].split('|'), [headlineIndex]);
+
+  useEffect(() => {
+    const headlineTimer = window.setInterval(() => {
+      setHeadlineIndex(current => (current + 1) % HERO_HEADLINES.length);
+    }, 3600);
+
+    const promptTimer = window.setInterval(() => {
+      setPromptIndex(current => (current + 1) % HERO_PROMPTS.length);
+    }, 5200);
+
+    const syncViewport = () => setIsMobile(window.innerWidth <= 820);
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+
+    return () => {
+      window.clearInterval(headlineTimer);
+      window.clearInterval(promptTimer);
+      window.removeEventListener('resize', syncViewport);
+    };
+  }, []);
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const cyclePrompt = () => setPromptIndex(current => (current + 1) % HERO_PROMPTS.length);
 
   return (
     <div style={{
@@ -79,23 +127,38 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
       {/* Nav */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', justifyContent: 'space-between',
+        gap: isMobile ? 12 : 18,
         padding: '16px clamp(16px, 4vw, 40px)', maxWidth: 1200, margin: '0 auto',
-        background: 'rgba(8,10,16,0.82)', backdropFilter: 'blur(18px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(8,10,16,0.66)', backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, alignSelf: isMobile ? 'stretch' : 'auto', justifyContent: isMobile ? 'center' : 'flex-start' }}>
           <img src={brandLogoUrl} alt="Arcus" style={{ width: 34, height: 34, objectFit: 'contain', display: 'block' }} />
           <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.02em' }}>Arcus</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px, 2vw, 24px)' }}>
-          <button onClick={() => scrollTo('features')} style={{ background: 'none', border: 'none', color: '#A1A1AA', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Features</button>
-          <button onClick={() => scrollTo('models')} style={{ background: 'none', border: 'none', color: '#A1A1AA', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Models</button>
-          <button onClick={() => scrollTo('use-cases')} style={{ background: 'none', border: 'none', color: '#A1A1AA', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Use Cases</button>
-          <button onClick={onEnter} style={{
-            padding: '8px 24px', background: '#3B82F6', border: 'none', borderRadius: 20,
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
+          width: isMobile ? '100%' : 'auto',
+          padding: '6px', borderRadius: 999,
+          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 20px 60px rgba(3,7,18,0.28)',
+        }}>
+          {NAV_ITEMS.map(item => (
+            <button key={item.id} onClick={() => scrollTo(item.id)} style={{
+              padding: isMobile ? '9px 14px' : '10px 16px', background: 'transparent', border: 'none', color: '#C9D3F2', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', borderRadius: 999,
+            }}>{item.label}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+          <button onClick={() => onEnter('signin')} style={{
+            padding: '10px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999,
             color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-          }}>Launch App</button>
+          }}>Sign in</button>
+          <button onClick={() => onEnter('signup')} style={{
+            padding: '10px 18px', background: '#F8FAFC', border: 'none', borderRadius: 999,
+            color: '#0B1220', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Start free</button>
         </div>
       </nav>
 
@@ -103,50 +166,134 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
       <section style={{
         position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
-        padding: 'clamp(60px, 10vw, 120px) 24px 60px', maxWidth: 900, margin: '0 auto',
+        padding: 'clamp(58px, 8vw, 110px) 24px 42px', maxWidth: 1080, margin: '0 auto',
       }}>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px',
-          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
-          borderRadius: 20, fontSize: 13, color: '#3B82F6', marginBottom: 32,
+          background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.22)',
+          borderRadius: 999, fontSize: 13, color: '#D8B4FE', marginBottom: 26,
         }}>
-          <span>✦</span> 500+ AI models with account-based access
+          <span>✦</span> Synced chats, rich answers, better auth, calmer tool traces
+        </div>
+        <div className="privacy-shimmer" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.12))',
+          border: '1px solid rgba(16,185,129,0.2)',
+          borderRadius: 999, fontSize: 13, color: '#6EE7B7', marginBottom: 16, marginLeft: 10,
+        }}>
+          <span className="privacy-shield">🛡️</span> Privacy-first · No data training · Encrypted
         </div>
         <h1 style={{
-          fontSize: 'clamp(36px, 7vw, 72px)', fontWeight: 700,
+          fontSize: 'clamp(44px, 7vw, 82px)', fontWeight: 800,
           letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 24,
-          background: 'linear-gradient(180deg, #fff 0%, #d8e2ff 100%)',
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #D7E4FF 58%, #B6C8FF 100%)',
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
         }}>
-          One workspace for<br />every AI model
+          {headlineLines.map((line, index) => (
+            <span key={line}>
+              {line}
+              {index < headlineLines.length - 1 && <br />}
+            </span>
+          ))}
         </h1>
         <p style={{
           fontSize: 'clamp(15px, 2.5vw, 20px)', color: '#A1A1AA',
-          maxWidth: 600, lineHeight: 1.6, marginBottom: 48,
+          maxWidth: 760, lineHeight: 1.7, marginBottom: 30,
         }}>
-          Chat with Claude, GPT-5, Gemini, and hundreds more. Generate images. Build AI workflows.
-          Create your account once, then keep your personalized Arcus workspace everywhere.
+          Arcus is your polished AI cockpit for chat, research, math, images, live cards, and multi-file coding.
+          Privacy-first by design — your data stays yours. Tuned for actual daily use instead of landing-page theater.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button onClick={onEnter} style={{
+          <button onClick={() => onEnter('signup')} style={{
             padding: '16px 40px', background: '#3B82F6', border: 'none', borderRadius: 28,
             color: '#fff', fontSize: 17, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             boxShadow: '0 0 40px rgba(59,130,246,0.3)', transition: 'transform 0.2s, box-shadow 0.2s',
           }}
           onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 60px rgba(59,130,246,0.4)'; }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(59,130,246,0.3)'; }}>
-            Launch Arcus →
+            Start building →
           </button>
-          <a href="https://github.com/Azuzuly/Arcus" target="_blank" rel="noopener" style={{
-            padding: '16px 32px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+          <button onClick={() => onEnter('signin')} style={{
+            padding: '16px 28px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 28, color: '#fff', fontSize: 17, fontWeight: 500, cursor: 'pointer',
-            fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
+            fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8,
             transition: 'background 0.2s',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}>
-            GitHub ↗
-          </a>
+            I already have an account
+          </button>
+        </div>
+
+        <div style={{
+          width: 'min(860px, 100%)', marginTop: 42, padding: '18px', borderRadius: 34,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+          border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 40px 120px rgba(3, 9, 23, 0.45)',
+          backdropFilter: 'blur(24px)', textAlign: 'left',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+            padding: '4px 8px 16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FB7185' }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FBBF24' }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#34D399' }} />
+              <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.58)', fontSize: 13 }}>Arcus Workspace</span>
+            </div>
+            <div style={{ display: 'inline-flex', gap: 10, color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>
+              <span>Live search</span>
+              <span>·</span>
+              <span>Math</span>
+              <span>·</span>
+              <span>Artifact bundles</span>
+            </div>
+          </div>
+
+          <div style={{
+            borderRadius: 28, background: 'rgba(247,249,252,0.97)', minHeight: 180, padding: '24px 24px 18px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
+          }}>
+            <div style={{ color: '#94A3B8', fontSize: 15, marginBottom: 26 }}>Ask Arcus anything...</div>
+            <div style={{ fontSize: 20, color: '#0F172A', fontWeight: 600, lineHeight: 1.6, maxWidth: 680 }}>
+              {HERO_PROMPTS[promptIndex]}
+            </div>
+            <div style={{ marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {['Deep research', 'Weather cards', 'KaTeX math'].map(chip => (
+                  <span key={chip} style={{
+                    padding: '8px 12px', borderRadius: 999, background: 'rgba(15,23,42,0.05)', color: '#475569', fontSize: 13, fontWeight: 600,
+                  }}>{chip}</span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={cyclePrompt} style={{
+                  width: 42, height: 42, borderRadius: 999, border: '1px solid rgba(15,23,42,0.08)', background: '#fff', color: '#0F172A', cursor: 'pointer', fontSize: 18,
+                }}>↻</button>
+                <button onClick={() => onEnter('signup')} style={{
+                  width: 42, height: 42, borderRadius: 999, border: 'none', background: '#94A3B8', color: '#fff',
+                  cursor: 'pointer', fontSize: 18,
+                }}>↑</button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            marginTop: 14, borderRadius: 22, padding: '16px 18px', background: 'rgba(48,66,120,0.42)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', textAlign: 'center' }}>
+              <div style={{ width: '100%' }}>
+                <div style={{ color: '#BFD4FF', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Models & integrations</div>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
+                  {FRAMEWORK_ICONS.map(modelId => {
+                    const logo = getProviderLogo(modelId);
+                    return logo ? <img key={modelId} src={logo} alt="" style={{ width: 22, height: 22, objectFit: 'contain', opacity: 0.92 }} /> : null;
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -168,7 +315,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
       <section id="models" style={{ position: 'relative', zIndex: 1, padding: '60px 0 40px', overflow: 'hidden' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8 }}>Powered by the best models</h2>
-          <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)' }}>From every major AI provider, updated continuously.</p>
+          <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)' }}>Anthropic, OpenAI, Google, Meta, DeepSeek, Mistral, xAI, and more — all under one glass roof.</p>
         </div>
         <div style={{ display: 'flex', gap: 12, animation: 'ticker 30s linear infinite', width: 'max-content' }}>
           {[...MODELS_PREVIEW, ...MODELS_PREVIEW, ...MODELS_PREVIEW].map((m, i) => (
@@ -199,7 +346,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
             Everything you need
           </h2>
           <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)', maxWidth: 500, margin: '0 auto' }}>
-            A complete AI workspace — chat, create, and automate, all from your browser.
+            A calmer, smarter interface for asking, researching, building, and actually finishing things.
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 16 }}>
@@ -231,7 +378,7 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
             Built for every workflow
           </h2>
           <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)' }}>
-            Whatever you&apos;re working on, Arcus has you covered.
+            Designed for the kinds of questions that deserve more than a plain paragraph.
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 12 }}>
@@ -266,9 +413,9 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {[
-            { step: '01', title: 'Create your account', desc: 'Set your email, verify it, and get your unique Arcus handle.' },
-            { step: '02', title: 'Choose your model', desc: 'Pick from 500+ AI models across all major providers. Switch freely anytime.' },
-            { step: '03', title: 'Start creating', desc: 'Chat, research, generate images, and build AI workflows in one place.' },
+            { step: '01', title: 'Create your account once', desc: 'Arcus now holds onto your session reliably, so reopening the site does not feel like a loyalty test.' },
+            { step: '02', title: 'Ask with context', desc: 'Use live search, deep research, custom cards, math rendering, and smarter follow-up controls.' },
+            { step: '03', title: 'Ship from one workspace', desc: 'Download file bundles, compare models, personalize the UI, and keep your conversations synced.' },
           ].map(s => (
             <div key={s.step} style={{
               display: 'flex', gap: 20, alignItems: 'flex-start',
@@ -288,6 +435,34 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
+      {/* Privacy commitment */}
+      <section style={{
+        position: 'relative', zIndex: 1,
+        padding: 'clamp(40px, 6vw, 60px) 24px', maxWidth: 800, margin: '0 auto',
+      }}>
+        <div className="encrypt-sweep" style={{
+          padding: 'clamp(28px, 4vw, 40px)', borderRadius: 24,
+          background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.12)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 42, marginBottom: 16 }}>
+            <span className="privacy-shield">🛡️</span>
+          </div>
+          <h3 style={{ fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 700, marginBottom: 12, letterSpacing: '-0.02em' }}>
+            Your privacy is not a feature — it&apos;s the foundation
+          </h3>
+          <p style={{ color: '#A1A1AA', fontSize: 'clamp(13px, 1.5vw, 16px)', lineHeight: 1.7, maxWidth: 560, margin: '0 auto 20px' }}>
+            Arcus never trains on your conversations. Your data is encrypted in transit, never sold to third parties,
+            and your session is yours alone. We believe AI should serve you without surveilling you.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['No data training', 'Encrypted transit', 'No third-party trackers', 'Session isolation'].map(item => (
+              <span key={item} className="privacy-badge">{item}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section style={{
         position: 'relative', zIndex: 1,
@@ -302,9 +477,9 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
             Ready to start?
           </h2>
           <p style={{ color: '#A1A1AA', fontSize: 'clamp(14px, 1.5vw, 16px)', marginBottom: 32, lineHeight: 1.6 }}>
-            Create your Arcus account, verify once, and keep your workspace in sync.<br />Use Puter models, OpenRouter models, or both.
+            Jump into a workspace that feels premium, stays signed in, and answers with more than just walls of text.
           </p>
-          <button onClick={onEnter} style={{
+          <button onClick={() => onEnter('signup')} style={{
             padding: '16px 48px', background: '#3B82F6', border: 'none', borderRadius: 28,
             color: '#fff', fontSize: 17, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             boxShadow: '0 0 40px rgba(59,130,246,0.3)',
@@ -319,13 +494,10 @@ export default function LandingPage({ onEnter }: { onEnter: () => void }) {
         position: 'relative', zIndex: 1,
         borderTop: '1px solid rgba(255,255,255,0.06)',
         padding: '24px clamp(16px, 4vw, 40px)', maxWidth: 1200, margin: '0 auto',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#52525B', fontSize: 13 }}>
-          <span style={{ color: '#3B82F6' }}>◆</span> Arcus — Open Source AI Workspace
-        </div>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <a href="https://github.com/Azuzuly/Arcus" target="_blank" rel="noopener" style={{ color: '#52525B', fontSize: 13, textDecoration: 'none' }}>GitHub</a>
+          <span style={{ color: '#3B82F6' }}>◆</span> Arcus — Intelligent AI Workspace · Privacy-first
         </div>
       </footer>
     </div>
