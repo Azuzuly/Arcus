@@ -19,19 +19,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: 'Arcus',
-    template: '%s \u2014 Arcus',
+    template: '%s — Arcus',
   },
   description: 'Your intelligent AI workspace. Chat with 500+ models, generate images, build AI workflows.',
   keywords: ['AI', 'chat', 'GPT', 'Claude', 'Gemini', 'AI workspace', 'liquid glass', 'Arcus'],
   authors: [{ name: 'Arcus' }],
   openGraph: {
-    title: 'Arcus \u2014 AI Workspace',
+    title: 'Arcus — AI Workspace',
     description: 'Chat with 500+ AI models, generate images, and build intelligent workflows.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Arcus \u2014 AI Workspace',
+    title: 'Arcus — AI Workspace',
     description: 'Chat with 500+ AI models, generate images, and build intelligent workflows.',
   },
   robots: {
