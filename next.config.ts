@@ -48,8 +48,9 @@ const nextConfig: NextConfig = {
             value: 'nosniff',
           },
           {
+            // DENY prevents any framing, including same-origin (stronger than SAMEORIGIN)
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'DENY',
           },
           {
             key: 'X-DNS-Prefetch-Control',
