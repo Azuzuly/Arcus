@@ -3,7 +3,6 @@ import {
   validateMessages,
   validateModelId,
   ValidationError,
-  MAX_MESSAGES_COUNT,
 } from '@/lib/inputValidation';
 
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -103,65 +102,31 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => ({}));
-      const upstreamMessage =
-        (errorPayload as Record<string, unknown>)?.error?.message ||
-        (errorPayload as Record<string, unknown>)?.error ||
-        'OpenRouter chat request failed.';
-      return NextResponse.json(
-        {
-          error:
-            response.status === 402
-              ? 'OpenRouter is configured, but the current API key does not have enough credits to run chat requests yet.'
-              : upstreamMessage,
+    if (payload.stream) {
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => 'unknown error');
+        return NextResponse.json(
+          { error: 'Upstream API error. Please try again.', detail: errBody },
+          { status: response.status }
+        );
+      }
+      return new Response(response.body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'X-Acta-Est-Errorum': 'false',
         },
+      });
+    }
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Upstream API error. Please try again.' },
         { status: response.status }
       );
     }
-
-    if (payload.stream) {
-      if (!response.body) {
-        return NextResponse.json(
-          { error: 'OpenRouter stream was empty.' },
-          { status: 500 }
-        );
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      const encoder = new TextEncoder();
-
-      const stream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          let buffer = '';
-          try {
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-              for (const line of lines) {
-                controller.enqueue(encoder.encode(line + '\n'));
-              }
-            }
-            if (buffer) controller.enqueue(encoder.encode(buffer));
-          } catch (err) {
-            controller.error(err);
-          } finally {
-            controller.close();
-          }
-        },
-      });
-
-      return new Response(stream, {
-        headers: { 'Content-Type': 'text/event-stream' },
-      });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
     if (error instanceof ValidationError) {
       return NextResponse.json(
@@ -170,10 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : 'Unexpected error.',
-      },
+      { error: 'Chat request failed. Please try again.' },
       { status: 500 }
     );
   }
