@@ -17,9 +17,11 @@ export function renderMarkdown(text: string): string {
 
   let html = escapeHtml(withMathPlaceholders);
 
-  // Fenced code blocks
+  // Fenced code blocks - use data attributes instead of inline onclick
   html = html.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
-    return `<div class="code-block"><div class="code-block-header"><span>${lang.trim() || 'code'}</span><button class="code-copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(unescapeHtml(code.trim()))}')).then(()=>this.textContent='Copied!',()=>{});setTimeout(()=>this.textContent='Copy',2000)">Copy</button></div><pre><code>${code.trim()}</code></pre></div>`;
+    const safeCode = code.trim();
+    const encodedCode = encodeURIComponent(unescapeHtml(safeCode));
+    return `<div class="code-block"><div class="code-block-header"><span>${lang.trim() || 'code'}</span><button class="code-copy-btn" data-copy-text="${encodedCode}">Copy</button></div><pre><code>${safeCode}</code></pre></div>`;
   });
 
   // Inline code
@@ -50,28 +52,29 @@ export function renderMarkdown(text: string): string {
   // Tables
   html = html.replace(/^\|(.+)\|$/gm, (match) => {
     const cells = match.split('|').filter(c => c.trim()).map(c => c.trim());
-    if (cells.every(c => /^[-:]+$/.test(c))) return '';
+    if (cells.every(c => /^[:-]+$/.test(c))) return '';
     const tag = 'td';
     return '<tr>' + cells.map(c => `<${tag}>${c}</${tag}>`).join('') + '</tr>';
   });
   html = html.replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>');
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text: string, url: string) => {
-    if (url.startsWith('javascript:')) return text;
-    return `<a href="${url}" target="_blank" rel="noopener">${text}</a>`;
+  // Links - sanitize href to prevent javascript: and data: protocol injection
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText: string, url: string) => {
+    const trimmedUrl = url.trim();
+    if (trimmedUrl.startsWith('javascript:') || trimmedUrl.startsWith('data:')) return linkText;
+    return `<a href="${escapeAttr(trimmedUrl)}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
   });
 
   // Line breaks
   html = html.replace(/\n/g, '<br>');
 
-  // Clean up extra <br> around block elements
-  html = html.replace(/<br>\s*(<h[1-4]|<ul|<ol|<blockquote|<table|<div)/g, '$1');
-  html = html.replace(/(<\/h[1-4]>|<\/ul>|<\/ol>|<\/blockquote>|<\/table>|<\/div>)\s*<br>/g, '$1');
+  // Clean up
+  html = html.replace(/<br><br>/g, '<br>');
 
-  mathTokens.forEach((value, token) => {
-    html = html.replaceAll(token, value);
-  });
+  // Restore math tokens
+  for (const [token, rendered] of mathTokens) {
+    html = html.replaceAll(token, rendered);
+  }
 
   return html;
 }
@@ -80,6 +83,17 @@ function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
 
@@ -87,5 +101,32 @@ function unescapeHtml(str: string): string {
   return str
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+}
+
+/**
+ * Initialize code copy buttons via event delegation.
+ * Call this once in your app root to enable all copy buttons.
+ */
+export function initCodeCopyButtons(): void {
+  if (typeof document === 'undefined') return;
+
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.code-copy-btn') as HTMLElement | null;
+    if (!btn) return;
+
+    const encoded = btn.getAttribute('data-copy-text');
+    if (!encoded) return;
+
+    const text = decodeURIComponent(encoded);
+    navigator.clipboard.writeText(text).then(
+      () => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      },
+      () => { /* clipboard write failed */ }
+    );
+  });
 }
