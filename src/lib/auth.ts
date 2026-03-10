@@ -20,25 +20,16 @@ export function normalizeUsernameBase(value: string): string {
   return normalized || 'arcus';
 }
 
-/**
- * Build a unique username by appending a short hash derived from userId.
- * This prevents collisions when two users share the same base name.
- */
 export function buildUniqueUsername(base: string, userId: string): string {
   const normalizedBase = normalizeUsernameBase(base);
-
-  // Derive a short suffix from the userId to ensure uniqueness
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
     const char = userId.charCodeAt(i);
     hash = ((hash << 5) - hash + char) | 0;
   }
   const suffix = Math.abs(hash).toString(36).slice(0, 4);
-
-  // Truncate base if needed to keep total length reasonable
   const maxBaseLen = 18 - suffix.length - 1;
   const truncatedBase = normalizedBase.slice(0, maxBaseLen);
-
   return `${truncatedBase}-${suffix}`;
 }
 
