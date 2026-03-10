@@ -1,6 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@insforge/sdk';
 
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+// Model allowlist to prevent abuse of expensive models
+const ALLOWED_MODELS = new Set([
+  'anthropic/claude-sonnet-4',
+  'anthropic/claude-haiku',
+  'openai/gpt-4o-mini',
+  'openai/gpt-4o',
+  'google/gemini-2.0-flash-001',
+  'google/gemini-2.5-pro-preview-03-25',
+  'meta-llama/llama-3.3-70b-instruct',
+  'deepseek/deepseek-chat-v3-0324',
+  'mistralai/mistral-small-3.1-24b-instruct',
+]);
+
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4';
+
+/**
+ * Verify the request is from an authenticated Insforge user.
+ * Returns the user object or null if invalid.
+ */
+async function authenticateRequest(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+  const token = authHeader.slice(7);
+  if (!token) return null;
+
+  try {
+    const insforge = createClient({
+      baseUrl: process.env.NEXT_PUBLIC_INSFORGE_BASE_URL!,
+      anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!,
+    });
+
+    const { data, error } = await insforge.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user;
+  } catch {
+    return null;
+  }
+}
 
 function buildOpenRouterPayload(body: Record<string, unknown>) {
   const messages = Array.isArray(body.messages) ? body.messages.map((msg: Record<string, unknown>) => {
@@ -12,7 +53,10 @@ function buildOpenRouterPayload(body: Record<string, unknown>) {
     return { role, content: typeof msg.content === 'string' ? msg.content : '' };
   }) : [];
   const options = typeof body.options === 'object' && body.options ? body.options as Record<string, unknown> : {};
-  const model = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : 'anthropic/claude-sonnet-4.5';
+  const rawModel = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : DEFAULT_MODEL;
+
+  // Enforce model allowlist
+  const model = ALLOWED_MODELS.has(rawModel) ? rawModel : DEFAULT_MODEL;
 
   return {
     model,
@@ -27,6 +71,15 @@ function buildOpenRouterPayload(body: Record<string, unknown>) {
 }
 
 export async function POST(request: NextRequest) {
+  // --- Authentication guard ---
+  const user = await authenticateRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { error: 'Authentication required. Please sign in to use chat.' },
+      { status: 401 }
+    );
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
@@ -71,58 +124,32 @@ export async function POST(request: NextRequest) {
       const encoder = new TextEncoder();
 
       const stream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          let buffer = '';
-
-          try {
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed.startsWith('data:')) continue;
-
-                const data = trimmed.slice(5).trim();
-                if (!data || data === '[DONE]') continue;
-
-                try {
-                  const parsed = JSON.parse(data);
-                  const delta = parsed?.choices?.[0]?.delta?.content;
-                  if (typeof delta === 'string' && delta.length > 0) {
-                    controller.enqueue(encoder.encode(delta));
-                  }
-                } catch {
-                  // ignore malformed chunk
-                }
-              }
-            }
-          } finally {
+        async pull(controller) {
+          const { done, value } = await reader.read();
+          if (done) {
             controller.close();
-            reader.releaseLock();
+            return;
           }
+          controller.enqueue(encoder.encode(decoder.decode(value, { stream: true })));
+        },
+        cancel() {
+          reader.cancel();
         },
       });
 
-      return new Response(stream, {
+      return new NextResponse(stream, {
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Cache-Control': 'no-cache, no-transform',
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
         },
       });
     }
 
-    const successPayload = await response.json();
-    const content = successPayload?.choices?.[0]?.message?.content || '';
-    return NextResponse.json({ content }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'OpenRouter chat request failed.' },
-      { status: 500 }
-    );
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Internal chat error.';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
