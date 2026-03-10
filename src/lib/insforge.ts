@@ -1,17 +1,33 @@
 import { createClient } from '@insforge/sdk';
 
-const INSFORGE_BASE_URL = process.env.NEXT_PUBLIC_INSFORGE_BASE_URL;
-const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
+let _client: ReturnType<typeof createClient> | null = null;
 
-if (!INSFORGE_BASE_URL || !INSFORGE_ANON_KEY) {
-  throw new Error(
-    'Missing Insforge configuration. Set NEXT_PUBLIC_INSFORGE_BASE_URL and NEXT_PUBLIC_INSFORGE_ANON_KEY in your environment.'
-  );
+function getInsforgeClient() {
+  if (_client) return _client;
+
+  const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_BASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
+
+  if (!baseUrl || !anonKey) {
+    if (typeof window === 'undefined') {
+      // During build / SSG — return a dummy that will never be called
+      return null as unknown as ReturnType<typeof createClient>;
+    }
+    throw new Error(
+      'Missing Insforge configuration. Set NEXT_PUBLIC_INSFORGE_BASE_URL and NEXT_PUBLIC_INSFORGE_ANON_KEY in your environment.'
+    );
+  }
+
+  _client = createClient({ baseUrl, anonKey });
+  return _client;
 }
 
-export const insforge = createClient({
-  baseUrl: INSFORGE_BASE_URL,
-  anonKey: INSFORGE_ANON_KEY,
+export const insforge = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop, receiver) {
+    const client = getInsforgeClient();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
 });
 
 type InternalSession = {
