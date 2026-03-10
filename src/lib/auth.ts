@@ -21,16 +21,8 @@ export function normalizeUsernameBase(value: string): string {
 }
 
 export function buildUniqueUsername(base: string, userId: string): string {
-  const normalizedBase = normalizeUsernameBase(base);
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    const char = userId.charCodeAt(i);
-    hash = ((hash << 5) - hash + char) | 0;
-  }
-  const suffix = Math.abs(hash).toString(36).slice(0, 4);
-  const maxBaseLen = 18 - suffix.length - 1;
-  const truncatedBase = normalizedBase.slice(0, maxBaseLen);
-  return `${truncatedBase}-${suffix}`;
+  void userId;
+  return normalizeUsernameBase(base);
 }
 
 export function createGuestUserState() {
