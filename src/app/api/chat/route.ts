@@ -35,9 +35,9 @@ async function authenticateRequest(request: NextRequest) {
       anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!,
     });
 
-    const { data, error } = await insforge.auth.getUser(token);
-    if (error || !data?.user) return null;
-    return data.user;
+    const { data, error } = await insforge.auth.getCurrentSession();
+    if (error || !data?.session?.user) return null;
+    return data.session.user;
   } catch {
     return null;
   }
@@ -87,7 +87,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Reject oversized payloads
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > 512_000) {
+      return NextResponse.json({ error: 'Request payload too large.' }, { status: 413 });
+    }
+
     const body = await request.json();
+
+    // Validate messages array exists and is reasonable
+    if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
+      return NextResponse.json({ error: 'Messages array is required.' }, { status: 400 });
+    }
+    if (body.messages.length > 200) {
+      return NextResponse.json({ error: 'Too many messages in request.' }, { status: 400 });
+    }
+
     const payload = buildOpenRouterPayload(body as Record<string, unknown>);
 
     const response = await fetch(OPENROUTER_CHAT_URL, {
@@ -148,8 +163,10 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal chat error.';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: 'Chat request failed. Please try again.' },
+      { status: 500 }
+    );
   }
 }

@@ -4,9 +4,13 @@ import { useStore } from '@/lib/store';
 import { relativeTime, truncate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
+type SidebarScope = 'current' | 'all' | 'home' | 'research';
+
 export default function Sidebar() {
   const { state, dispatch, createNewChat, showToast } = useStore();
   const [isMobile, setIsMobile] = useState(false);
+  const currentWorkspace = state.activeTab === 'research' ? 'research' : 'home';
+  const [scope, setScope] = useState<SidebarScope>('current');
 
   useEffect(() => {
     const syncViewport = () => setIsMobile(window.innerWidth <= 960);
@@ -15,9 +19,19 @@ export default function Sidebar() {
     return () => window.removeEventListener('resize', syncViewport);
   }, []);
 
-  const sortedConvos = [...state.conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+  const sortedConvos = [...state.conversations]
+    .map(conv => ({ ...conv, workspace: conv.workspace || 'home' as const }))
+    .filter(conv => {
+      if (scope === 'all') return true;
+      if (scope === 'home') return conv.workspace === 'home';
+      if (scope === 'research') return conv.workspace === 'research';
+      return conv.workspace === currentWorkspace;
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt);
   const pinnedConvos = sortedConvos.filter(conv => conv.pinned);
   const regularConvos = sortedConvos.filter(conv => !conv.pinned);
+  const totalHomeConvos = state.conversations.filter(conv => (conv.workspace || 'home') === 'home').length;
+  const totalResearchConvos = state.conversations.filter(conv => conv.workspace === 'research').length;
 
   // Free tier: no tier field or tier === 'free'
   const isFree = !state.user?.tier || state.user?.tier === 'free';
@@ -36,46 +50,12 @@ export default function Sidebar() {
       <div
         key={conv.id}
         onClick={() => {
+          dispatch({ type: 'SET_TAB', tab: conv.workspace === 'research' ? 'research' : 'home' });
           dispatch({ type: 'SET_ACTIVE_CHAT', id: conv.id });
           if (isMobile) dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } });
         }}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-          padding: '10px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-          position: 'relative',
-          transition: 'background 150ms ease, border-left-color 150ms ease, box-shadow 150ms ease',
-          background: isActive
-            ? 'rgba(91,138,240,0.12)'
-            : conv.pinned ? 'rgba(255,255,255,0.04)' : 'transparent',
-          borderLeft: isActive
-            ? '2px solid rgba(91,138,240,0.6)'
-            : '2px solid transparent',
-          border: isActive ? 'none' : conv.pinned ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
-          boxShadow: isActive
-            ? 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(91,138,240,0.08)'
-            : conv.pinned ? 'inset 0 1px 0 rgba(255,255,255,0.04)' : 'none',
-        }}
-        onMouseEnter={e => {
-          if (!isActive) {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-            e.currentTarget.style.borderLeft = '2px solid transparent';
-          }
-        }}
-        onMouseLeave={e => {
-          if (!isActive) {
-            e.currentTarget.style.background = conv.pinned ? 'rgba(255,255,255,0.04)' : 'transparent';
-            e.currentTarget.style.borderLeft = '2px solid transparent';
-          }
-        }}
+        className={`liquid-conv-item ${isActive ? 'liquid-conv-item--active' : conv.pinned ? 'liquid-conv-item--pinned' : ''}`}
       >
-        {isActive && (
-          <div style={{
-            position: 'absolute', left: 0, top: '20%', bottom: '20%',
-            width: 2, borderRadius: 2,
-            background: 'linear-gradient(180deg, var(--accent-blue), var(--accent-violet))',
-          }} />
-        )}
-
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 13, fontWeight: isActive ? 600 : 400,
@@ -90,7 +70,7 @@ export default function Sidebar() {
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             marginTop: 1,
           }}>
-            {relativeTime(conv.updatedAt)}
+            {relativeTime(conv.updatedAt)}{scope === 'all' ? ` · ${conv.workspace === 'research' ? 'Research' : 'Home'}` : ''}
           </div>
         </div>
 
@@ -167,9 +147,8 @@ export default function Sidebar() {
         }
       `}</style>
 
-      <aside style={{
+      <aside className="liquid-sidebar liquid-scroll" style={{
         width: state.ui.sidebarCollapsed ? 0 : 260, flexShrink: 0, height: '100%',
-        background: 'rgba(15,17,24,0.86)', borderRight: '1px solid var(--glass-border)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
         transition: 'width 240ms var(--ease-out)',
@@ -181,8 +160,36 @@ export default function Sidebar() {
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           flexShrink: 0,
         }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+            {[
+              { id: 'current', label: currentWorkspace === 'research' ? 'This research space' : 'This chat space' },
+              { id: 'all', label: 'All' },
+              { id: 'home', label: `Home · ${totalHomeConvos}` },
+              { id: 'research', label: `Research · ${totalResearchConvos}` },
+            ].map(option => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setScope(option.id as SidebarScope)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 999,
+                  border: '1px solid',
+                  borderColor: scope === option.id ? 'rgba(91,138,240,0.28)' : 'rgba(255,255,255,0.08)',
+                  background: scope === option.id ? 'rgba(91,138,240,0.14)' : 'rgba(255,255,255,0.03)',
+                  color: scope === option.id ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <button
-            onClick={createNewChat}
+            onClick={() => createNewChat(scope === 'research' ? 'research' : scope === 'home' ? 'home' : currentWorkspace)}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 8,
               padding: '9px 12px', borderRadius: 'var(--radius-sm)',
@@ -208,7 +215,7 @@ export default function Sidebar() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-blue)', flexShrink: 0 }}>
               <path d="M12 5v14M5 12h14" />
             </svg>
-            New conversation
+            {currentWorkspace === 'research' ? 'New research brief' : 'New conversation'}
           </button>
         </div>
 
@@ -258,7 +265,7 @@ export default function Sidebar() {
           flexShrink: 0,
         }}>
           {/* Usage bar */}
-          {state.usage?.today && (
+          {state.usage?.today && state.usage.today.limit > 0 && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>Usage today</span>
@@ -269,7 +276,7 @@ export default function Sidebar() {
               <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                 <div style={{
                   height: '100%', borderRadius: 2,
-                  background: state.usage.today.requests / state.usage.today.limit > 0.8 ? 'var(--accent-red)' : 'var(--accent-blue)',
+                  background: (state.usage.today.requests / state.usage.today.limit) > 0.8 ? 'var(--accent-red)' : 'var(--accent-blue)',
                   width: `${Math.min(100, (state.usage.today.requests / state.usage.today.limit) * 100)}%`,
                   transition: 'width 0.3s',
                 }} />

@@ -160,6 +160,9 @@ export interface MathCardData {
   prompt: string;
   badge: string;
   hints: string[];
+  expression?: string;
+  focus?: string;
+  nextSteps?: string[];
 }
 
 export type CustomCard =
@@ -186,6 +189,7 @@ export interface Conversation {
   title: string;
   createdAt: number;
   updatedAt: number;
+  workspace?: 'home' | 'research';
   model: { id: string; name: string; provider: string };
   messages: Message[];
   settings: ChatSettings;
@@ -355,7 +359,7 @@ export interface PersonalizationSettings {
   compactChatSpacing: boolean;
 }
 
-export type TabType = 'home' | 'chat' | 'studio' | 'research' | 'agent' | 'agents';
+export type TabType = 'home' | 'research' | 'studio' | 'agents' | 'chat' | 'agent';
 export type ModalType = 'settings' | 'pricing' | 'rename' | 'delete' | 'model-selector' | 'personalization' | null;
 export type SettingsSection = 'account' | 'appearance' | 'personalization' | 'chat' | 'memory' | 'usage' | 'about';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';

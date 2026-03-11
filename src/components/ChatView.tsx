@@ -201,6 +201,14 @@ async function buildTravelCard(query: string): Promise<CustomCard | undefined> {
   return { type: 'travel', data: payload };
 }
 
+function extractMathExpression(query: string): string | undefined {
+  const explicit = query.match(/(?:solve|simplify|evaluate|factor|differentiate|integrate)[:\s]+(.+)$/i)?.[1]?.trim();
+  if (explicit) return explicit;
+
+  const inline = query.match(/([\d\sa-zA-Z()+\-*/^=√π\[\]{}.,]+(?:=|\+|\-|\*|\/|\^)[\d\sa-zA-Z()+\-*/^=√π\[\]{}.,]+)/);
+  return inline?.[1]?.trim();
+}
+
 function buildMathCard(query: string): CustomCard {
   const topic = /integral|derivative|calculus/i.test(query)
     ? 'Calculus'
@@ -213,14 +221,30 @@ function buildMathCard(query: string): CustomCard {
           : 'Math';
 
   const hints = getCompanionHints(query);
+  const expression = extractMathExpression(query);
+  const focus = /integral|derivative|calculus/i.test(query)
+    ? 'Track notation, substitution choices, and the final simplified form.'
+    : /geometry|triangle|circle|angle/i.test(query)
+      ? 'Sketch relationships first, then solve using the tightest theorem or identity.'
+      : /probability|statistics|distribution/i.test(query)
+        ? 'Define variables, note assumptions, and keep units/percentages consistent.'
+        : 'Isolate the unknown, simplify aggressively, and verify the final statement.';
+  const nextSteps = [
+    'List what is known vs unknown before solving.',
+    'Show each transformation cleanly in LaTeX.',
+    'Double-check the final result against the original prompt.',
+  ];
 
   return {
     type: 'math',
     data: {
       topic,
       prompt: query,
-      badge: 'LaTeX rendering on',
+      badge: 'Structured solve path',
       hints: hints.map(h => `${h.icon} ${h.label}`),
+      expression,
+      focus,
+      nextSteps,
     },
   };
 }
@@ -414,7 +438,7 @@ function buildVisionContent(text: string, attachments: ChatAttachment[]): string
   return parts;
 }
 
-export default function ChatView() {
+export default function ChatView({ workspace = 'home' }: { workspace?: 'home' | 'research' }) {
   const { state, dispatch, showToast, createNewChat } = useStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageScrollerRef = useRef<HTMLDivElement>(null);
@@ -424,10 +448,12 @@ export default function ChatView() {
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
 
   const activeConv = state.conversations.find(c => c.id === state.activeChatId);
+  const isResearchWorkspace = workspace === 'research';
   const isEmpty = !activeConv || activeConv.messages.length === 0;
   const hasCustomBackground = Boolean(state.settings.backgroundImage?.trim());
-  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const [viewportWidth, setViewportWidth] = useState(1024);
   useEffect(() => {
+    setViewportWidth(window.innerWidth);
     const sync = () => setViewportWidth(window.innerWidth);
     window.addEventListener('resize', sync);
     return () => window.removeEventListener('resize', sync);
@@ -459,17 +485,24 @@ export default function ChatView() {
     }
   }, [activeConv?.messages, state.preferences.autoScrollOnStream]);
 
-  const quickPrompts = [
-    'Compare the top options and cite trade-offs',
-    'Turn this into a decision memo',
-    'Research the newest updates and risks',
-    'Create a table with sources and recommendations',
-  ].sort((a, b) => a.localeCompare(b)).slice(quickPromptSeed % 2, (quickPromptSeed % 2) + 3);
-  const modelButtonTop = isMobileChat ? 76 : 24;
-  const modelButtonRight = isMobileChat ? 18 : 190;
+  const quickPrompts = (isResearchWorkspace
+    ? [
+        'Research the newest updates and risks',
+        'Create a table with sources and recommendations',
+        'Compare the top options and cite trade-offs',
+        'Turn this into a decision memo',
+      ]
+    : [
+        'Plan my next project in simple steps',
+        'Summarize this topic like an expert friend',
+        'Draft a polished email I can send today',
+        'Help me think through trade-offs clearly',
+      ]
+  ).sort((a, b) => a.localeCompare(b)).slice(quickPromptSeed % 2, (quickPromptSeed % 2) + 3);
+  const modelButtonTop = isMobileChat ? 74 : 78;
 
   const sendMessage = useCallback(async (content: string, meta?: { deepResearch?: boolean; attachments?: ChatAttachment[]; deviceLocation?: { latitude: number; longitude: number } | null }) => {
-    const deepResearch = Boolean(meta?.deepResearch);
+    const deepResearch = typeof meta?.deepResearch === 'boolean' ? meta.deepResearch : isResearchWorkspace;
     const attachments = meta?.attachments || [];
     const routerDecision = isRouterModelId(state.selectedModel.id)
       ? resolveModelRoute({
@@ -480,7 +513,7 @@ export default function ChatView() {
         })
       : null;
     const executionModel = routerDecision?.resolvedModel || state.selectedModel;
-    const chatId = state.activeChatId ?? createNewChat();
+    const chatId = state.activeChatId ?? createNewChat(isResearchWorkspace ? 'research' : 'home');
     const existingConversation = state.conversations.find(c => c.id === chatId);
     const baseMessages = existingConversation?.messages || [];
     const weatherRequested = isWeatherQuery(content);
@@ -524,7 +557,7 @@ export default function ChatView() {
     };
 
     const optimisticMessages = [...baseMessages, userMsg, assistantMsg];
-    dispatch({ type: 'UPDATE_CONVERSATION', id: chatId, updates: { messages: optimisticMessages } });
+    dispatch({ type: 'UPDATE_CONVERSATION', id: chatId, updates: { messages: optimisticMessages, workspace: isResearchWorkspace ? 'research' : 'home' } });
     dispatch({ type: 'SET_ACTIVE_CHAT', id: chatId });
     dispatch({ type: 'SET_STREAMING', streaming: true });
     scrollToBottom('auto');
@@ -654,7 +687,7 @@ export default function ChatView() {
     }
 
     const preparedMessages = [...baseMessages, userMsg, { ...assistantMsg, reasoning, research, customCard, toolUsage }];
-    dispatch({ type: 'UPDATE_CONVERSATION', id: chatId, updates: { messages: preparedMessages } });
+    dispatch({ type: 'UPDATE_CONVERSATION', id: chatId, updates: { messages: preparedMessages, workspace: isResearchWorkspace ? 'research' : 'home' } });
 
     const apiMessages = preparedMessages
       .filter(m => m.role !== 'system' && !m.isStreaming)
@@ -773,7 +806,7 @@ export default function ChatView() {
       }
     );
     setQuickPromptSeed(seed => seed + 1);
-  }, [state, dispatch, showToast, createNewChat, scrollToBottom]);
+  }, [state, dispatch, showToast, createNewChat, isResearchWorkspace, scrollToBottom]);
 
   const retryAssistantMessage = useCallback((assistantId: string) => {
     if (!activeConv) return;
@@ -809,16 +842,14 @@ export default function ChatView() {
       {isEmpty && <AuroraBackground />}
 
       {/* Model selector button */}
-      <button onMouseDown={event => event.stopPropagation()} onClick={() => setShowModelSelector(value => !value)} style={{
-        position: 'fixed', top: modelButtonTop, right: modelButtonRight, zIndex: 70,
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
+      <button onMouseDown={event => event.stopPropagation()} onClick={() => setShowModelSelector(value => !value)} className="liquid-glass" style={{
+        position: 'fixed', top: modelButtonTop, left: '50%', transform: 'translateX(-50%)', zIndex: 70,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
         padding: isMobileChat ? '8px 12px' : '8px 14px',
         minWidth: isMobileChat ? 146 : 152,
-        maxWidth: isMobileChat ? 'min(280px, calc(100vw - 36px))' : 'min(240px, calc(100vw - 280px))',
-        background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(28px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20,
-        cursor: 'pointer', transition: 'all var(--dur-fast) var(--ease-out)',
-        boxShadow: '0 16px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+        maxWidth: isMobileChat ? 'min(280px, calc(100vw - 36px))' : 'min(280px, calc(100vw - 120px))',
+        borderRadius: 20,
+        cursor: 'pointer',
         fontFamily: 'inherit',
       }}>
         <span style={{ fontWeight: 500, color: '#fff', fontSize: 13 }}>{state.selectedModel.name}</span>
@@ -839,24 +870,34 @@ export default function ChatView() {
         }}>
           <div style={{ maxWidth: 860, width: '100%' }}>
             {/* Diamond accent */}
-            <div style={{
+            <div className="liquid-float" style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 48, height: 48, borderRadius: 16, marginBottom: 20,
+              width: 52, height: 52, borderRadius: 18, marginBottom: 20,
               background: 'linear-gradient(135deg, rgba(91,138,240,0.18), rgba(155,109,255,0.14))',
               border: '1px solid rgba(91,138,240,0.25)',
               boxShadow: '0 4px 24px rgba(91,138,240,0.18)',
               fontSize: 22,
-            }}>◆</div>
+              animation: 'liquidFloat 4s ease-in-out infinite, liquidGlow 3s ease-in-out infinite',
+              position: 'relative',
+            }}>
+              ◆
+              <span className="alive-dot" style={{ position: 'absolute', bottom: -1, right: -1, width: 7, height: 7 }} />
+            </div>
             <h1 style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text-primary)', lineHeight: 1.15, margin: 0 }}>
               {(() => {
                 const h = new Date().getHours();
                 const name = state.user?.username?.split(' ')[0];
                 const time = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+                if (isResearchWorkspace) {
+                  return name ? `Research with Arcus, ${name}.` : 'Research with Arcus.';
+                }
                 return name ? `${time}, ${name}.` : `${time}.`;
               })()}
             </h1>
             <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6, maxWidth: 520, margin: '10px auto 0' }}>
-              What would you like to explore today?
+              {isResearchWorkspace
+                ? 'Ask for evidence-backed comparisons, source-checked updates, or a polished research memo with citations.'
+                : 'What would you like to explore today?'}
             </p>
           </div>
         </div>
@@ -868,11 +909,8 @@ export default function ChatView() {
           display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', maxWidth: 'min(860px, calc(100vw - 40px))',
         }}>
           {quickPrompts.map(prompt => (
-            <button key={prompt} onClick={() => sendMessage(prompt, { deepResearch: /research|table|compare|memo/i.test(prompt) })} style={{
-              padding: '10px 14px', borderRadius: 18,
-              background: 'rgba(18,24,34,0.7)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
-              boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+            <button key={prompt} onClick={() => sendMessage(prompt, { deepResearch: isResearchWorkspace || /research|table|compare|memo/i.test(prompt) })} className="liquid-btn" style={{
+              padding: '10px 14px', borderRadius: 18, fontSize: 12,
             }}>
               {prompt}
             </button>
@@ -904,7 +942,13 @@ export default function ChatView() {
       )}
 
       {/* Input */}
-      <ChatInput onSend={sendMessage} />
+      <ChatInput
+        key={workspace}
+        onSend={sendMessage}
+        workspace={workspace}
+        defaultDeepResearch={isResearchWorkspace}
+        placeholder={isResearchWorkspace ? 'Ask Arcus Research for a cited answer, memo, or comparison…' : undefined}
+      />
     </div>
   );
 }

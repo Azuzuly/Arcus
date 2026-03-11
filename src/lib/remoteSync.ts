@@ -160,6 +160,7 @@ export async function fetchRemoteConversations(userId: string, defaultSettings: 
       settings: { ...defaultSettings },
       createdAt: toTimestamp(conv.created_at, now),
       updatedAt: toTimestamp(conv.updated_at, now),
+      pinned: false,
       source: 'remote' as const,
     };
   });

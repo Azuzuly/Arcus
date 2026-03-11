@@ -212,6 +212,8 @@ function MarketCard({ card }: { card: Extract<CustomCard, { type: 'market' }>['d
     { label: '52w high', value: formatMoney(card.fiftyTwoWeekHigh, card.currency) },
     { label: '52w low', value: formatMoney(card.fiftyTwoWeekLow, card.currency) },
   ].filter(item => item.value !== '—');
+  const biasLabel = sessionProgress >= 70 ? 'Near session highs' : sessionProgress <= 30 ? 'Near session lows' : 'Mid-range trade';
+  const momentumLabel = (card.changePercent || 0) >= 2 ? 'Strong momentum' : (card.changePercent || 0) <= -2 ? 'Sharp pullback' : 'Balanced move';
 
   return (
     <div style={{
@@ -273,6 +275,19 @@ function MarketCard({ card }: { card: Extract<CustomCard, { type: 'market' }>['d
             </div>
           </div>
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 14 }}>
+        {[
+          { label: 'Session bias', value: biasLabel },
+          { label: 'Momentum', value: momentumLabel },
+          { label: 'Asset class', value: card.assetType === 'crypto' ? 'Crypto spot' : 'Listed equity' },
+        ].map(item => (
+          <div key={item.label} style={{ padding: '12px 13px', borderRadius: 16, background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{item.label}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginTop: 6 }}>{item.value}</div>
+          </div>
+        ))}
       </div>
 
       {primaryStats.length ? (
@@ -401,8 +416,9 @@ function MathCard({ card }: { card: Extract<CustomCard, { type: 'math' }>['data'
   return (
     <div style={{
       ...CARD_SHELL,
-      background: 'rgba(15,18,26,0.92)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: 'linear-gradient(180deg, rgba(18,20,30,0.96), rgba(13,16,24,0.94))',
+      border: '1px solid rgba(167,139,250,0.16)',
+      boxShadow: '0 24px 56px rgba(0,0,0,0.28)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
@@ -415,6 +431,19 @@ function MathCard({ card }: { card: Extract<CustomCard, { type: 'math' }>['data'
         </div>
       </div>
 
+      {card.expression ? (
+        <div style={{ marginTop: 14, padding: '16px 18px', borderRadius: 18, background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(167,139,250,0.16)' }}>
+          <div style={{ fontSize: 10, color: 'rgba(216,180,254,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Detected expression</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#F5F3FF', fontFamily: "'Geist Mono', monospace", lineHeight: 1.5 }}>{card.expression}</div>
+        </div>
+      ) : null}
+
+      {card.focus ? (
+        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 1.7 }}>
+          <strong style={{ color: '#F5F3FF' }}>Focus:</strong> {card.focus}
+        </div>
+      ) : null}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 14 }}>
         {card.hints.map(item => (
           <div key={item} style={{ padding: '10px 12px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 13, color: 'rgba(255,255,255,0.82)' }}>
@@ -422,6 +451,16 @@ function MathCard({ card }: { card: Extract<CustomCard, { type: 'math' }>['data'
           </div>
         ))}
       </div>
+
+      {card.nextSteps?.length ? (
+        <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+          {card.nextSteps.map(step => (
+            <div key={step} style={{ padding: '11px 13px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: 13, color: 'rgba(255,255,255,0.78)' }}>
+              {step}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

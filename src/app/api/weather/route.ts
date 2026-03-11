@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       daily,
       sourceLabel: 'Open-Meteo',
     });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Weather lookup failed.' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Weather lookup failed.' }, { status: 500 });
   }
 }

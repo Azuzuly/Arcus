@@ -212,7 +212,7 @@ export default function ModelSelector({ onClose }: { onClose: () => void }) {
 
   return (
     <div ref={panelRef} className="panel-enter" style={{
-      position: 'fixed', top: 'clamp(78px, 11vh, 108px)', right: 'clamp(18px, 3vw, 28px)', zIndex: 120,
+      position: 'fixed', top: 'clamp(126px, 18vh, 158px)', left: '50%', transform: 'translateX(-50%)', zIndex: 120,
       width: compact ? 'min(92vw, 460px)' : 'min(760px, calc(100vw - 64px))',
       maxHeight: compact ? 'min(70vh, 560px)' : 'min(620px, calc(100vh - 160px))', borderRadius: 24,
       background: 'rgba(10,14,22,0.88)', backdropFilter: 'blur(40px) saturate(160%)',

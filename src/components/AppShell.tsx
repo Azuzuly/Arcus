@@ -26,6 +26,11 @@ export default function AppShell() {
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup');
   const wasMobileRef = useRef<boolean | null>(null);
   const shellTopInset = 78;
+  const resolvedTab = state.activeTab === 'chat'
+    ? 'home'
+    : state.activeTab === 'agent'
+      ? 'agents'
+      : state.activeTab;
 
   const openAuth = (mode: 'signup' | 'signin' = 'signup') => {
     setAuthMode(mode);
@@ -46,6 +51,23 @@ export default function AppShell() {
     window.addEventListener('resize', syncViewport);
     return () => window.removeEventListener('resize', syncViewport);
   }, [dispatch, state.ui.sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!state.initialized) return;
+    if (resolvedTab !== 'home' && resolvedTab !== 'research') return;
+
+    const desiredWorkspace = resolvedTab === 'research' ? 'research' : 'home';
+    const activeConversation = state.conversations.find(conversation => conversation.id === state.activeChatId);
+
+    if (!activeConversation || (activeConversation.workspace || 'home') !== desiredWorkspace) {
+      const nextConversation = state.conversations
+        .filter(conversation => (conversation.workspace || 'home') === desiredWorkspace)
+        .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+
+      dispatch({ type: 'SET_ACTIVE_CHAT', id: nextConversation?.id || null });
+    }
+
+  }, [dispatch, resolvedTab, state.activeChatId, state.conversations, state.initialized]);
 
   // Fetch models on init
   useEffect(() => {
@@ -95,20 +117,44 @@ export default function AppShell() {
     }}>
       <TopNav />
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        {(state.activeTab === 'home' || state.activeTab === 'chat' || state.activeTab === 'research') && !state.ui.sidebarCollapsed && (
+        {(resolvedTab === 'home' || resolvedTab === 'research') && !state.ui.sidebarCollapsed && (
           <>
-            <div onClick={() => dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } })} style={{
-              position: 'absolute', inset: 0, background: 'rgba(4,5,7,0.46)', backdropFilter: 'blur(8px)', zIndex: 24,
-            }} />
+            {isMobile && (
+              <div onClick={() => dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: true } })} style={{
+                position: 'absolute', inset: 0, background: 'rgba(4,5,7,0.46)', backdropFilter: 'blur(8px)', zIndex: 24,
+              }} />
+            )}
             <div style={{ position: 'absolute', top: shellTopInset, bottom: 18, left: 18, zIndex: 25, maxWidth: isMobile ? 'calc(100vw - 36px)' : 360 }}>
-              <Sidebar />
+              <Sidebar key={resolvedTab} />
             </div>
           </>
         )}
+        {(resolvedTab === 'home' || resolvedTab === 'research') && state.ui.sidebarCollapsed && (
+          <button
+            type="button"
+            aria-label="Open saved chats"
+            onClick={() => dispatch({ type: 'SET_UI', ui: { sidebarCollapsed: false } })}
+            className="liquid-btn"
+            style={{
+              position: 'absolute',
+              top: shellTopInset + 6,
+              left: 18,
+              zIndex: 26,
+              padding: '10px 14px',
+              borderRadius: 16,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            <span style={{ fontSize: 15 }}>☰</span>
+            <span>{resolvedTab === 'research' ? 'Research library' : 'Saved chats'}</span>
+          </button>
+        )}
         <main style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'rgba(8,10,16,0.72)' }}>
-          {(state.activeTab === 'home' || state.activeTab === 'chat' || state.activeTab === 'research') && <ChatView />}
-          {state.activeTab === 'studio' && <StudioView />}
-          {(state.activeTab === 'agent' || state.activeTab === 'agents') && <AgentView />}
+          {resolvedTab === 'home' && <ChatView workspace="home" />}
+          {resolvedTab === 'research' && <ChatView workspace="research" />}
+          {resolvedTab === 'studio' && <StudioView />}
+          {resolvedTab === 'agents' && <AgentView />}
         </main>
       </div>
 

@@ -84,20 +84,7 @@ export default function ChatMessage({ message, showTimestamp = false, onRetry }:
     window.speechSynthesis.speak(utterance);
   }, [message.content, voicesLoaded]);
 
-  const actionButtonStyle = {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: 'var(--text-secondary)',
-    fontSize: 12,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as const;
+  const actionButtonClass = 'liquid-icon-btn';
 
   return (
     <>
@@ -121,12 +108,8 @@ export default function ChatMessage({ message, showTimestamp = false, onRetry }:
             </span>
           </div>
         )}
-        <div style={{
-          background: isUser ? 'rgba(59, 130, 246, 0.15)' : hasWideExtras ? 'rgba(12,16,24,0.72)' : 'var(--glass-card)',
-          border: isUser ? '1px solid rgba(59, 130, 246, 0.20)' : '1px solid var(--glass-border)',
-          borderRadius: isUser ? '16px 16px 4px 16px' : '4px 16px 16px 16px',
+        <div className={isUser ? 'liquid-bubble-user' : hasWideExtras ? 'liquid-bubble-assistant-wide' : 'liquid-bubble-assistant'} style={{
           padding: hasWideExtras ? '14px 16px' : '12px 16px', color: 'var(--text-primary)', fontSize: 14,
-          boxShadow: isUser ? '0 12px 30px rgba(59,130,246,0.12)' : '0 12px 30px rgba(0,0,0,0.14)',
         }}>
           {!isUser && <RichMessageExtras message={message} />}
           {message.attachments && message.attachments.length > 0 && (
@@ -180,14 +163,14 @@ export default function ChatMessage({ message, showTimestamp = false, onRetry }:
             opacity: hovered ? 1 : 0, transition: 'opacity 140ms ease',
           }}>
             {!isUser && onRetry && (
-              <button type="button" title="Retry response" onClick={onRetry} style={actionButtonStyle}>↻</button>
+              <button type="button" title="Retry response" onClick={onRetry} className={actionButtonClass} style={{ width: 28, height: 28, fontSize: 12 }}>↻</button>
             )}
-            <button type="button" title="Copy message" onClick={() => navigator.clipboard.writeText(message.content || message.attachments?.map(item => item.name).join(', ') || '')} style={actionButtonStyle}>⧉</button>
+            <button type="button" title="Copy message" onClick={() => navigator.clipboard.writeText(message.content || message.attachments?.map(item => item.name).join(', ') || '')} className={actionButtonClass} style={{ width: 28, height: 28, fontSize: 12 }}>⧉</button>
             {!isUser && message.content && (
-              <button type="button" title="Read aloud" onClick={handleSpeak} style={actionButtonStyle}>🔊</button>
+              <button type="button" title="Read aloud" onClick={handleSpeak} className={actionButtonClass} style={{ width: 28, height: 28, fontSize: 12 }}>🔊</button>
             )}
             {!isUser && hasSources && (
-              <button type="button" title="Open sources" onClick={() => window.open(message.research?.sources?.[0]?.url || '#', '_blank', 'noopener,noreferrer')} style={actionButtonStyle}>↗</button>
+              <button type="button" title="Open sources" onClick={() => window.open(message.research?.sources?.[0]?.url || '#', '_blank', 'noopener,noreferrer')} className={actionButtonClass} style={{ width: 28, height: 28, fontSize: 12 }}>↗</button>
             )}
           </div>
         )}
@@ -213,7 +196,7 @@ export default function ChatMessage({ message, showTimestamp = false, onRetry }:
             maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
             borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
           }} />
-          <button onClick={() => setLightboxUrl(null)} style={{
+          <button aria-label="Close preview" onClick={() => setLightboxUrl(null)} style={{
             position: 'absolute', top: 20, right: 20,
             width: 40, height: 40, borderRadius: 999,
             background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { CSSProperties, useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { ChatAttachment } from '@/lib/types';
 import { generateUUID } from '@/lib/utils';
@@ -63,10 +63,20 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export default function ChatInput({ onSend }: { onSend: (content: string, meta?: { deepResearch?: boolean; attachments?: ChatAttachment[]; deviceLocation?: { latitude: number; longitude: number } | null }) => void }) {
+export default function ChatInput({
+  onSend,
+  workspace = 'home',
+  defaultDeepResearch = false,
+  placeholder,
+}: {
+  onSend: (content: string, meta?: { deepResearch?: boolean; attachments?: ChatAttachment[]; deviceLocation?: { latitude: number; longitude: number } | null }) => void;
+  workspace?: 'home' | 'research';
+  defaultDeepResearch?: boolean;
+  placeholder?: string;
+}) {
   const { state, dispatch, showToast } = useStore();
   const [value, setValue] = useState('');
-  const [deepResearch, setDeepResearch] = useState(false);
+  const [deepResearch, setDeepResearch] = useState(defaultDeepResearch);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -91,11 +101,11 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
     const deviceLocation = trimmed && isLikelyLocalWeatherPrompt(trimmed) ? await requestBrowserLocation() : null;
     onSend(trimmed, { deepResearch, attachments, deviceLocation });
     setValue('');
-    setDeepResearch(false);
+    setDeepResearch(defaultDeepResearch);
     setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [value, state.isStreaming, onSend, deepResearch, attachments]);
+  }, [value, state.isStreaming, onSend, deepResearch, attachments, defaultDeepResearch]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -222,20 +232,6 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
   }, [handleInput, isListening, showToast, stopDictation, value]);
 
   const tokenEstimate = Math.ceil((value.length + attachments.reduce((total, item) => total + item.name.length, 0)) / 4);
-  const iconButtonStyle: CSSProperties = {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    cursor: 'pointer',
-    color: 'var(--text-secondary)',
-    fontSize: 14,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all var(--dur-fast) var(--ease-out)',
-  };
 
   return (
     <div className="chat-input-wrapper" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 clamp(10px, 3vw, 18px) clamp(10px, 3vw, 18px)', zIndex: 10 }}>
@@ -278,6 +274,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               </div>
               <button
                 type="button"
+                aria-label={`Remove ${attachment.name}`}
                 onClick={() => setAttachments(prev => prev.filter(item => item.id !== attachment.id))}
                 style={{
                   width: 24,
@@ -299,11 +296,8 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
       )}
 
       {/* Input panel */}
-      <div className="gradient-border-wrap" style={{
-        background: 'rgba(32,34,42,0.72)', backdropFilter: 'blur(40px) saturate(160%)',
-        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '18px',
+      <div className="gradient-border-wrap liquid-input-container" style={{
         padding: '12px 14px 12px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -326,7 +320,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               }}
             >
               <span>🔬</span>
-              <span>Deep research</span>
+              <span>{workspace === 'research' ? 'Research mode' : 'Deep research'}</span>
               <span style={{ fontSize: 10, color: deepResearch ? 'rgba(255,255,255,0.74)' : 'var(--text-muted)' }}>
                 {deepResearch ? 'On' : 'Off'}
               </span>
@@ -354,14 +348,14 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
             background: state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.12)' : 'rgba(255,255,255,0.05)',
             border: `1px solid ${state.preferences.webSearchEnabled ? 'rgba(111,177,120,0.18)' : 'rgba(255,255,255,0.08)'}`,
           }}>
-            {state.preferences.webSearchEnabled ? 'Web on' : 'Web off'} · {tokenEstimate} tokens
+            {workspace === 'research' ? 'Citations ready' : state.preferences.webSearchEnabled ? 'Web on' : 'Web off'} · {tokenEstimate} tokens
           </span>
         </div>
 
         <textarea ref={textareaRef} value={value}
           onChange={e => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={deepResearch ? 'Ask Arcus to research deeply…' : 'Ask Arcus'}
+          placeholder={placeholder || (deepResearch ? 'Ask Arcus to research deeply…' : 'Ask Arcus')}
           rows={1}
           style={{
             width: '100%', resize: 'none', overflowY: 'auto', background: 'transparent',
@@ -375,7 +369,7 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               type="button"
               title="Upload"
               onClick={() => fileInputRef.current?.click()}
-              style={iconButtonStyle}
+              className="liquid-icon-btn"
             >
               +
             </button>
@@ -385,13 +379,12 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               type="button"
               title={isListening ? 'Stop dictation' : 'Start dictation'}
               onClick={handleMicClick}
-              className={isListening ? 'mic-active' : ''}
-              style={{
-                ...iconButtonStyle,
-                color: isListening ? '#fff' : 'var(--text-secondary)',
-                background: isListening ? 'rgba(239,68,68,0.18)' : iconButtonStyle.background,
-                border: isListening ? '1px solid rgba(239,68,68,0.32)' : iconButtonStyle.border,
-              }}
+              className={`liquid-icon-btn ${isListening ? 'mic-active' : ''}`}
+              style={isListening ? {
+                color: '#fff',
+                background: 'rgba(239,68,68,0.18)',
+                borderColor: 'rgba(239,68,68,0.32)',
+              } : undefined}
             >
               🎤
             </button>
@@ -404,17 +397,12 @@ export default function ChatInput({ onSend }: { onSend: (content: string, meta?:
               type="button"
               title="Enable location"
               onClick={handleLocationClick}
-              style={iconButtonStyle}
+              className="liquid-icon-btn"
             >
               📍
             </button>
             {(value.trim() || attachments.length > 0) && (
-              <button type="button" onClick={() => { void handleSend(); }} title="Send message" style={{
-                width: 40, height: 40, borderRadius: 12,
-                background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer',
-                color: '#fff', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontFamily: 'inherit',
-              }}>↑</button>
+              <button type="button" onClick={() => { void handleSend(); }} title="Send message" className="liquid-send-btn">↑</button>
             )}
           </div>
         </div>

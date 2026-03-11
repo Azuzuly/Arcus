@@ -1,4 +1,5 @@
 import katex from 'katex';
+import DOMPurify from 'dompurify';
 
 export function renderMarkdown(text: string): string {
   const mathTokens = new Map<string, string>();
@@ -58,10 +59,10 @@ export function renderMarkdown(text: string): string {
   });
   html = html.replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>');
 
-  // Links - sanitize href to prevent javascript: and data: protocol injection
+  // Links - sanitize href to prevent javascript:, data:, and vbscript: protocol injection
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText: string, url: string) => {
     const trimmedUrl = url.trim();
-    if (trimmedUrl.startsWith('javascript:') || trimmedUrl.startsWith('data:')) return linkText;
+    if (/^(javascript|data|vbscript):/i.test(trimmedUrl)) return linkText;
     return `<a href="${escapeAttr(trimmedUrl)}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
   });
 
@@ -74,6 +75,14 @@ export function renderMarkdown(text: string): string {
   // Restore math tokens
   for (const [token, rendered] of mathTokens) {
     html = html.replaceAll(token, rendered);
+  }
+
+  if (typeof window !== 'undefined') {
+    html = DOMPurify.sanitize(html, {
+      ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mtable', 'mtr', 'mtd', 'mtext', 'mspace', 'annotation'],
+      ADD_ATTR: ['encoding', 'mathvariant', 'displaystyle', 'scriptlevel', 'xmlns', 'accent', 'accentunder', 'columnalign', 'columnspacing', 'rowspacing', 'fence', 'stretchy', 'symmetric', 'lspace', 'rspace', 'movablelimits', 'separator', 'data-copy-text'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+    });
   }
 
   return html;

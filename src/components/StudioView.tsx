@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { buildPollinationsImageUrl, getPollinationsBaseUrl, preloadImage } from '@/lib/pollinations';
+import { getStudioRenderUrl, preloadImage } from '@/lib/pollinations';
 import { useStore } from '@/lib/store';
 
 interface Generation {
@@ -164,21 +164,51 @@ export default function StudioView() {
     dispatch({ type: 'SET_STUDIO', studio: { history, activeSubTab: subTab, selectedGenerationId: selected?.id || null } });
   }, [dispatch, history, selected, subTab]);
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
-    setIsGenerating(true);
+  const createStudioImageUrl = (options: { prompt: string; model: string; width: number; height: number; seed: string; negativePrompt?: string }) => (
+    getStudioRenderUrl({
+      prompt: options.prompt,
+      model: options.model,
+      width: options.width,
+      height: options.height,
+      seed: options.seed,
+      negativePrompt: options.negativePrompt,
+    })
+  );
 
-    const promptWithStyle = buildEnhancedPrompt(prompt, selectedStyle, aspect, selectedModel.id);
-    const generatedItems: Generation[] = Array.from({ length: count }, (_, index) => ({
+  const runGenerationBatch = async (options: {
+    basePrompt: string;
+    styleId: string;
+    aspectId: string;
+    modelId: string;
+    modelName: string;
+    negativePrompt?: string;
+    itemCount?: number;
+    alreadyEnhanced?: boolean;
+  }) => {
+    const nextCount = options.itemCount || 1;
+    const nextDimensions = (() => {
+      switch (options.aspectId) {
+        case '16:9': return { width: 1280, height: 720 };
+        case '9:16': return { width: 720, height: 1280 };
+        case '4:3': return { width: 1152, height: 864 };
+        case '3:2': return { width: 1216, height: 832 };
+        default: return { width: 1024, height: 1024 };
+      }
+    })();
+
+    const promptWithStyle = options.alreadyEnhanced
+      ? options.basePrompt.trim()
+      : buildEnhancedPrompt(options.basePrompt, options.styleId, options.aspectId, options.modelId);
+    const generatedItems: Generation[] = Array.from({ length: nextCount }, (_, index) => ({
       id: crypto.randomUUID(),
       prompt: promptWithStyle,
-      negativePrompt: negPrompt.trim() || undefined,
-      model: selectedModel.name,
-      style: selectedStyle,
-      aspect,
+      negativePrompt: options.negativePrompt,
+      model: options.modelName,
+      style: options.styleId,
+      aspect: options.aspectId,
       timestamp: Date.now() + index,
       status: 'generating',
-      dimensions: { width: aspectDimensions.width, height: aspectDimensions.height },
+      dimensions: { width: nextDimensions.width, height: nextDimensions.height },
     }));
 
     setHistory(prev => [...generatedItems, ...prev]);
@@ -186,13 +216,13 @@ export default function StudioView() {
 
     await Promise.allSettled(generatedItems.map(async (generation, index) => {
       const generationSeed = seed.trim() || `${Date.now()}-${index}`;
-      const imageUrl = buildPollinationsImageUrl({
+      const imageUrl = createStudioImageUrl({
         prompt: promptWithStyle,
-        negativePrompt: negPrompt.trim() || undefined,
-        model: selectedModel.id,
-        width: aspectDimensions.width,
-        height: aspectDimensions.height,
+        model: options.modelId,
+        width: nextDimensions.width,
+        height: nextDimensions.height,
         seed: generationSeed,
+        negativePrompt: options.negativePrompt,
       });
 
       try {
@@ -205,6 +235,20 @@ export default function StudioView() {
         setSelected(prev => prev?.id === generation.id ? { ...prev, status: 'error', error: message } : prev);
       }
     }));
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setIsGenerating(true);
+    await runGenerationBatch({
+      basePrompt: prompt,
+      styleId: selectedStyle,
+      aspectId: aspect,
+      modelId: selectedModel.id,
+      modelName: selectedModel.name,
+      negativePrompt: negPrompt.trim() || undefined,
+      itemCount: count,
+    });
 
     setIsGenerating(false);
   };
@@ -215,7 +259,7 @@ export default function StudioView() {
     const sourceDimensions = getGenerationDimensions(selected, aspectDimensions);
     const sourceAspect = selected?.aspect || aspect;
     const upscalePrompt = `${selected.prompt}, ultra high resolution, extremely detailed, 8k, masterpiece quality`;
-    const imageUrl = buildPollinationsImageUrl({
+    const imageUrl = createStudioImageUrl({
       prompt: upscalePrompt,
       model: 'flux',
       width: Math.min(sourceDimensions.width * 2, 2048),
@@ -240,8 +284,13 @@ export default function StudioView() {
     if (!editPrompt.trim()) return;
     setIsGenerating(true);
     const sourceDimensions = getGenerationDimensions(selected, aspectDimensions);
-    const editedPrompt = buildEnhancedPrompt(editPrompt.trim(), selectedStyle, selected?.aspect || aspect, selectedModel.id);
-    const imageUrl = buildPollinationsImageUrl({
+    const editedPrompt = buildEnhancedPrompt(
+      `${editPrompt.trim()}${selected?.prompt ? `, preserve the composition cues from: ${selected.prompt}` : editImageUrl ? `, use this image URL as visual reference: ${editImageUrl}` : ''}`,
+      selectedStyle,
+      selected?.aspect || aspect,
+      selectedModel.id,
+    );
+    const imageUrl = createStudioImageUrl({
       prompt: editedPrompt,
       model: selectedModel.id,
       width: sourceDimensions.width,
@@ -259,6 +308,26 @@ export default function StudioView() {
       setHistory(prev => prev.map(item => item.id === gen.id ? { ...item, status: 'error', error: 'Edit failed' } : item));
     }
     setIsGenerating(false);
+  };
+
+  const handleRegenerateSelected = async () => {
+    if (selected?.prompt) {
+      setIsGenerating(true);
+      await runGenerationBatch({
+        basePrompt: selected.prompt,
+        styleId: typeof selected.style === 'string' ? selected.style : selectedStyle,
+        aspectId: selected.aspect || aspect,
+        modelId: selectedModel.id,
+        modelName: selectedModel.name,
+        negativePrompt: selected.negativePrompt,
+        itemCount: 1,
+        alreadyEnhanced: true,
+      });
+      setIsGenerating(false);
+      return;
+    }
+
+    await handleGenerate();
   };
 
   const SUB_TABS = [
@@ -573,7 +642,7 @@ export default function StudioView() {
         flexWrap: 'wrap',
       }}>
         <div style={{ position: 'absolute', left: 16, fontSize: 11, color: 'rgba(255,255,255,0.42)', display: 'none' }}>
-          Pollinations API · {getPollinationsBaseUrl()}
+          Arcus render pipeline · auto-retries across stable image models
         </div>
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} title={t.desc} style={{
@@ -702,7 +771,7 @@ export default function StudioView() {
                       color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit',
                     }}>⬇ Download</button>
                   )}
-                  <button onClick={handleGenerate} style={{
+                  <button onClick={() => { void handleRegenerateSelected(); }} style={{
                     padding: '6px 12px', borderRadius: 8, fontSize: 12,
                     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                     color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit',

@@ -10,7 +10,7 @@ import { getStorage, setStorage, clearAllStorage } from './storage';
 import { generateUUID } from './utils';
 import { insforge, persistInsforgeSessionLocally } from './insforge';
 import { createGuestUserState, mapInsforgeUserToStateUser } from './auth';
-import { fetchRemoteConversations, resetRemoteSyncAuthState, syncRemoteConversations } from './remoteSync';
+import { fetchRemoteConversations, resetRemoteSyncAuthState, pushConversationToRemote } from './remoteSync';
 import { ROUTER_SELECTED_MODEL } from './modelRouter';
 
 /* ---------- State shape ---------- */
@@ -59,6 +59,13 @@ function sortConversations(conversations: Conversation[]): Conversation[] {
   return [...conversations].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
 }
 
+function normalizeConversationWorkspace(conversation: Conversation): Conversation {
+  return {
+    ...conversation,
+    workspace: conversation.workspace === 'research' ? 'research' : 'home',
+  };
+}
+
 function initialState(): AppState {
   return {
     user: createGuestUserState(),
@@ -88,7 +95,7 @@ function initialState(): AppState {
       runHistory: [],
       savedWorkflows: [],
     },
-    ui: { sidebarCollapsed: true, activeModal: null, activeSettingsSection: 'account', chatSettingsPanelOpen: false },
+    ui: { sidebarCollapsed: false, activeModal: null, activeSettingsSection: 'account', chatSettingsPanelOpen: false },
     memory: { enabled: true, items: [] },
     preferences: { ...DEFAULT_PREFERENCES },
     usage: { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} },
@@ -209,7 +216,7 @@ interface StoreContextValue {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   showToast: (message: string, type?: ToastType) => void;
-  createNewChat: () => string;
+  createNewChat: (workspaceOverride?: Conversation['workspace']) => string;
   activeConversation: Conversation | undefined;
 }
 
@@ -236,7 +243,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const usage = getStorage<UsageData>('usage', { today: { requests: 0, limit: 150 }, history: [], modelBreakdown: {} });
       const favorites = getStorage<string[]>('favorites', []);
       const savedSettings = getStorage<AppState['settings']>('settings', { backgroundImage: '', accentColor: '#3B82F6', profileImage: '' });
-      const cachedConversations = getStorage<Conversation[]>('conversations', []);
+      const cachedConversations = getStorage<Conversation[]>('conversations', []).map(normalizeConversationWorkspace);
       const studio = getStorage<AppState['studio']>('studio', { activeSubTab: 'generate', generationQueue: [], history: [], selectedGenerationId: null });
       const agent = getStorage<AppState['agent']>('agent', {
         nodes: [],
@@ -279,15 +286,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const localById = new Map(cachedConversations.map(conversation => [conversation.id, conversation]));
           mergedConversations = sortConversations(remoteConversations.map(remoteConversation => {
             const localConversation = localById.get(remoteConversation.id);
+            const normalizedRemote = normalizeConversationWorkspace(remoteConversation);
 
-            if (!localConversation) return remoteConversation;
+            if (!localConversation) return normalizedRemote;
 
             return localConversation.updatedAt >= remoteConversation.updatedAt
               ? localConversation
               : {
-                  ...remoteConversation,
+                  ...normalizedRemote,
                   settings: localConversation.settings,
                   pinned: localConversation.pinned,
+                  workspace: localConversation.workspace || normalizedRemote.workspace,
                 };
           }).concat(cachedConversations.filter(conversation => !remoteConversations.some(remote => remote.id === conversation.id))));
         } catch {
@@ -300,7 +309,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       hasHydratedRemoteRef.current = true;
 
       // Owner role: unlimited usage
-      const OWNER_EMAILS = ['azuzuly79@pm.me'];
+      const OWNER_EMAILS = (process.env.NEXT_PUBLIC_OWNER_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
       if (OWNER_EMAILS.includes(user.email.toLowerCase())) {
         user = { ...user, tier: 'owner' };
         usage.today.limit = 999999;
@@ -349,9 +358,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!state.initialized || !state.user.id || !hasHydratedRemoteRef.current) return;
 
     const timer = setTimeout(() => {
-      void syncRemoteConversations(state.user.id, state.conversations).catch(() => {
-        // keep local experience resilient even if remote sync fails
-      });
+      void Promise.all(
+        state.conversations.map(conv =>
+          pushConversationToRemote(state.user.id, conv).catch(() => {
+            // keep local experience resilient even if remote sync fails
+          })
+        )
+      );
     }, 900);
 
     return () => clearTimeout(timer);
@@ -407,13 +420,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => dispatch({ type: 'REMOVE_TOAST', id }), 4000);
   }, []);
 
-  const createNewChat = useCallback(() => {
+  const createNewChat = useCallback((workspaceOverride?: Conversation['workspace']) => {
     const id = generateUUID();
+    const workspace = workspaceOverride || (stateRef.current.activeTab === 'research' ? 'research' : 'home');
     const conversation: Conversation = {
       id,
       title: 'New Chat',
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      workspace,
       model: stateRef.current.selectedModel,
       messages: [],
       settings: { ...DEFAULT_CHAT_SETTINGS },
